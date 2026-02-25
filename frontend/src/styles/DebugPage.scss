@@ -14,19 +14,35 @@
  * limitations under the License.
  */
 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import './index.css';
-import App from './App';
+body {
+  background-color: #121212;
+  color: #ffffff;
+}
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
-root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
-);
+.streaming-console {
+  display: flex;
+  height: 100vh;
+  background-color: #1e1e1e;
+  border: 1px solid #444;
+}
+
+.main-app-area {
+  flex-grow: 1;
+  position: relative;
+  background-color: #282828;
+  border: 1px solid #444;
+}
+
+.side-panel {
+  border: 1px solid #444;
+}
+
+.stream {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hidden {
+  display: none;
+}

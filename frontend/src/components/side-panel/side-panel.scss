@@ -115,7 +115,6 @@
         opacity: 0;
         display: none;
         transition: all 0.2s ease-in allow-discrete;
-
         .actions-nav {
           opacity: 0;
           display: none;
@@ -161,7 +160,7 @@
 .side-panel {
   width: 400px;
   transition: width 0.2s ease-in;
-
+  border: 1px solid lightslategrey;
   .react-select {
     background: var(--Neutral-20);
     color: var(--Neutral-90);
@@ -467,7 +466,7 @@
     border-top: 1px solid var(--Neutral-20);
     padding: 14px 25px;
     overflow: hidden;
-
+    border: 1px solid lightslategrey ;
     .input-content {
       position: relative;
       background: var(--Neutral-10);

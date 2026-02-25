@@ -14,51 +14,28 @@
  * limitations under the License.
  */
 
-import { useRef, useState } from "react";
-import "./App.scss";
+import { Routes, Route } from "react-router-dom";
+import RootPage from "./pages/RootPage";
+import DebugPage from "./pages/DebugPage";
 import { LiveAPIProvider } from "./contexts/LiveAPIContext";
-import SidePanel from "./components/side-panel/SidePanel";
-import cn from "classnames";
 
+const isDevelopment = process.env.NODE_ENV === 'development';
 // In development mode (frontend on :8501), connect to backend on :8000
-const isDevelopment = window.location.port === '8501';
 const defaultHost = isDevelopment ? `${window.location.hostname}:8000` : window.location.host;
 const defaultUri = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${defaultHost}/`;
 
 function App() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
-  const [serverUrl, setServerUrl] = useState<string>(defaultUri);
-  const [userId, setUserId] = useState<string>("user1");
-
   return (
-    <div className="App">
-      <LiveAPIProvider url={serverUrl} userId={userId}>
-        <div className="streaming-console">
-          <SidePanel
-            videoRef={videoRef}
-            supportsVideo={true}
-            onVideoStreamChange={setVideoStream}
-            serverUrl={serverUrl}
-            userId={userId}
-            onServerUrlChange={setServerUrl}
-            onUserIdChange={setUserId}
-          />
-          <main>
-            <div className="main-app-area">
-              <video
-                className={cn("stream", {
-                  hidden: !videoRef.current || !videoStream,
-                })}
-                ref={videoRef}
-                autoPlay
-                playsInline
-              />
-            </div>
-          </main>
-        </div>
-      </LiveAPIProvider>
-    </div>
+    <>
+      <Routes>
+        <Route path="/" element={
+          <LiveAPIProvider url={defaultUri} userId="user1">
+            <RootPage />
+          </LiveAPIProvider>
+        } />
+        {isDevelopment && <Route path="/debug" element={<DebugPage />} />}
+      </Routes>
+    </>
   );
 }
 

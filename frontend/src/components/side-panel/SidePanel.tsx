@@ -259,7 +259,7 @@ function SidePanel({
   return (
     <div className={`console-container ${open ? "open" : ""}`}>
       <header className="console-header">
-        <h2>Console</h2>
+        <h2>Debugging Console</h2>
         {open ? (
           <button className="toggle-button" onClick={() => setOpen(!open)}>
             <RiSidebarFoldLine color="#b4b8bb" />

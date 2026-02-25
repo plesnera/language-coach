@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import './index.css';
-import App from './App';
+import React, { useState } from 'react';
+import '../styles/RootPage.scss';
+import AudioController from '../components/audio-controller/AudioController';
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
-root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
-);
+const RootPage: React.FC = () => {
+  const [isTalking, setIsTalking] = useState(false);
+
+  return (
+    <div className="root-page">
+      <div className="talk-button-container">
+        <AudioController isTalking={isTalking} onTalkStateChange={setIsTalking} />
+      </div>
+    </div>
+  );
+};
+
+export default RootPage;
