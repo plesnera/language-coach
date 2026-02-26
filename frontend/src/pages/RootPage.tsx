@@ -14,12 +14,22 @@
  * limitations under the License.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../styles/RootPage.scss';
 import AudioController from '../components/audio-controller/AudioController';
+import { useLiveAPIContext } from '../contexts/LiveAPIContext';
 
 const RootPage: React.FC = () => {
   const [isTalking, setIsTalking] = useState(false);
+  const { connect } = useLiveAPIContext();
+  const initialConnectDone = useRef(false);
+
+  useEffect(() => {
+    if (!initialConnectDone.current) {
+      initialConnectDone.current = true;
+      connect();
+    }
+  }, [connect]);
 
   return (
     <div className="root-page">

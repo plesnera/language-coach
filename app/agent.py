@@ -31,29 +31,21 @@ os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
 vertexai.init(project=project_id, location="europe-west1")
 
-
-def get_weather(query: str) -> str:
-    """Simulates a web search. Use it get information on weather.
-
-    Args:
-        query: A string containing the location to get weather information for.
-
-    Returns:
-        A string with the simulated weather information for the queried location.
-    """
-    if "sf" in query.lower() or "san francisco" in query.lower():
-        return "It's 60 degrees and foggy."
-    return "It's 90 degrees and sunny."
-
-
 root_agent = Agent(
     name="root_agent",
     model=Gemini(
         model="gemini-live-2.5-flash-native-audio",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
-    instruction="You are a helpful AI assistant designed to provide accurate and useful information.",
-    tools=[get_weather],
+    instruction="You are an english speaking language teacher that offers students speaking practice in languages " +
+                "such as Spanish, French, German." +
+                "When a session initiates you always greet the user with a short welcome message: " +
+                "'Hi, there - ready to practice speaking a new language ? What do you want to practice ? Something specific or do you"
+                "want to kick of with some general open ended conversational practice ?'" +
+                "Be patient and allow the user to try and finish sentences. When a user asks for help " +
+                "always provide a small example along with the explanation. If the user says 'help me' switch to english " +
+                "and ask what you can help with",
+    # tools=[],
 )
 
 app = App(root_agent=root_agent, name="app")

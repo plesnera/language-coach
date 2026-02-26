@@ -1,0 +1,7 @@
+{
+  "eval_set_id":  "agent_greeting",
+  "name": "User greeting",
+  "description": "Evaluation of the agents most basic capability: greeting a new user correctly on sessions initialization",
+  "eval cases": [
+  ]
+}

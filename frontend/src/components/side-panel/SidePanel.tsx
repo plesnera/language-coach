@@ -24,6 +24,7 @@ import { UseMediaStreamResult } from "../../hooks/use-media-stream-mux";
 import { useScreenCapture } from "../../hooks/use-screen-capture";
 import { useWebcam } from "../../hooks/use-webcam";
 import { AudioRecorder } from "../../utils/audio-recorder";
+import { base64ToArrayBuffer, createWavFileFromPcm } from "../../utils/utils";
 import AudioPulse from "../audio-pulse/AudioPulse";
 import Logger, { LoggerFilterType } from "../logger/Logger";
 import TranscriptionPreview from "../transcription-preview/TranscriptionPreview";
@@ -107,6 +108,8 @@ function SidePanel({
   const [muted, setMuted] = useState(false);
   const renderCanvasRef = useRef<HTMLCanvasElement>(null);
   const connectButtonRef = useRef<HTMLButtonElement>(null);
+  const inputAudioChunks = useRef<ArrayBuffer[]>([]);
+  const outputAudioChunks = useRef<ArrayBuffer[]>([]);
   
   // Feedback state (local to SidePanel)
   const [feedbackScore, setFeedbackScore] = useState<number>(10);
@@ -128,6 +131,10 @@ function SidePanel({
 
   useEffect(() => {
     const onData = (base64: string) => {
+      const chunk = base64ToArrayBuffer(base64);
+      if (chunk.byteLength > 0) {
+        inputAudioChunks.current.push(chunk);
+      }
       client.sendRealtimeInput([
         {
           mimeType: "audio/pcm;rate=16000",
@@ -144,6 +151,17 @@ function SidePanel({
       audioRecorder.off("data", onData).off("volume", setInVolume);
     };
   }, [connected, client, muted, audioRecorder]);
+
+  // Capture agent's output audio
+  useEffect(() => {
+    const onAudio = (data: ArrayBuffer) => {
+      outputAudioChunks.current.push(data);
+    };
+    client.on("audio", onAudio);
+    return () => {
+      client.off("audio", onAudio);
+    };
+  }, [client]);
 
   useEffect(() => {
     if (videoRef && videoRef.current) {
@@ -256,6 +274,41 @@ function SidePanel({
     }
   };
 
+  const handleDownloadAudio = () => {
+    if (inputAudioChunks.current.length === 0 && outputAudioChunks.current.length === 0) {
+      alert("No audio has been recorded yet.");
+      return;
+    }
+
+    if (inputAudioChunks.current.length > 0) {
+      const inputWav = createWavFileFromPcm(inputAudioChunks.current, 16000);
+      const inputUrl = URL.createObjectURL(inputWav);
+      const inputLink = document.createElement('a');
+      inputLink.href = inputUrl;
+      inputLink.download = 'input.wav';
+      document.body.appendChild(inputLink);
+      inputLink.click();
+      document.body.removeChild(inputLink);
+      URL.revokeObjectURL(inputUrl);
+    }
+
+    if (outputAudioChunks.current.length > 0) {
+      const outputWav = createWavFileFromPcm(outputAudioChunks.current, 16000);
+      const outputUrl = URL.createObjectURL(outputWav);
+      const outputLink = document.createElement('a');
+      outputLink.href = outputUrl;
+      outputLink.download = 'output.wav';
+      document.body.appendChild(outputLink);
+      outputLink.click();
+      document.body.removeChild(outputLink);
+      URL.revokeObjectURL(outputUrl);
+    }
+
+    // Clear the chunks after downloading
+    inputAudioChunks.current = [];
+    outputAudioChunks.current = [];
+  };
+
   return (
     <div className={`console-container ${open ? "open" : ""}`}>
       <header className="console-header">
@@ -323,7 +376,16 @@ function SidePanel({
           <button
             ref={connectButtonRef}
             className={cn("action-button connect-toggle", { connected })}
-            onClick={connected ? disconnect : connect}
+            onClick={() => {
+              if (connected) {
+                disconnect();
+              } else {
+                // Reset recordings on new connection
+                inputAudioChunks.current = [];
+                outputAudioChunks.current = [];
+                connect();
+              }
+            }}
           >
             <span className="material-symbols-outlined filled">
               {connected ? "pause" : "play_arrow"}
@@ -363,6 +425,13 @@ function SidePanel({
               />
             </>
           )}
+          <button
+            className="action-button download-button"
+            onClick={handleDownloadAudio}
+            title="Download Audio"
+          >
+            <span className="material-symbols-outlined filled">download</span>
+          </button>
           {children}
         </nav>
 
