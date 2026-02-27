@@ -1,4 +1,4 @@
-# Gemini Code Assistant Context
+# Language Coach
 
 This document provides essential context about the "language-coach" application for the Gemini Code Assistant. It outlines the project's structure, technologies, and key operational commands to help the assistant understand and interact with the codebase effectively.
 
