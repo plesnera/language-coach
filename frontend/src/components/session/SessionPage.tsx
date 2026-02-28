@@ -11,17 +11,25 @@ export interface SessionPageProps {
   subtitle?: string;
   /** Extra content rendered above the audio controls (e.g. lesson info, topic card) */
   children?: React.ReactNode;
+  /**
+   * Context message sent to the agent after the session is established.
+   * Tells the agent which mode / lesson the user selected so it can start
+   * the conversation immediately instead of asking what the user wants.
+   */
+  systemContext?: string;
 }
 
 const SessionPage: React.FC<SessionPageProps> = ({
   title,
   subtitle,
   children,
+  systemContext,
 }) => {
   const [isTalking, setIsTalking] = useState(false);
-  const { connect } = useLiveAPIContext();
+  const { client, connected, connect } = useLiveAPIContext();
   const navigate = useNavigate();
   const initialConnectDone = useRef(false);
+  const contextSent = useRef(false);
 
   useEffect(() => {
     if (!initialConnectDone.current) {
@@ -29,6 +37,16 @@ const SessionPage: React.FC<SessionPageProps> = ({
       connect();
     }
   }, [connect]);
+
+  // Send context to the agent once the session is ready.
+  // For async pages (e.g. TopicSessionPage) systemContext may arrive
+  // after the connection is already established, so we watch both.
+  useEffect(() => {
+    if (connected && systemContext && !contextSent.current) {
+      contextSent.current = true;
+      client.send([{ text: systemContext }]);
+    }
+  }, [connected, systemContext, client]);
 
   return (
     <div className="session-page">
