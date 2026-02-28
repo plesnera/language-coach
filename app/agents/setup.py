@@ -12,6 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .agents.router_agent import app
+"""One-time environment bootstrap shared by all agent modules."""
 
-__all__ = ["app"]
+from __future__ import annotations
+
+import os
+
+import google.auth
+import vertexai
+from dotenv import load_dotenv
+
+load_dotenv()
+
+_, project_id = google.auth.default()
+os.environ.setdefault("GOOGLE_CLOUD_PROJECT", project_id)
+os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "europe-west1")
+os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "True")
+
+vertexai.init(project=project_id, location="europe-west1")

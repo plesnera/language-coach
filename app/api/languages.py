@@ -12,6 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .agents.router_agent import app
+"""Public language endpoints (``/api/languages/``)."""
 
-__all__ = ["app"]
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Depends
+
+from app.auth.dependencies import get_current_user
+from app.db import languages as lang_repo
+
+router = APIRouter(prefix="/api/languages", tags=["languages"])
+
+
+@router.get("/")
+def list_languages(
+    _user: dict[str, Any] = Depends(get_current_user),
+) -> list[dict[str, Any]]:
+    """Return all enabled languages."""
+    return lang_repo.list_enabled()

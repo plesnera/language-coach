@@ -39,6 +39,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Register REST API routers ───────────────────────────────────────────────
+from app.api.admin import router as admin_router  # noqa: E402
+from app.api.conversations import router as conversations_router  # noqa: E402
+from app.api.courses import router as courses_router  # noqa: E402
+from app.api.documents import router as documents_router  # noqa: E402
+from app.api.languages import router as languages_router  # noqa: E402
+from app.api.progress import router as progress_router  # noqa: E402
+from app.api.topics import router as topics_router  # noqa: E402
+from app.auth.router import router as auth_router  # noqa: E402
+
+app.include_router(auth_router)
+app.include_router(languages_router)
+app.include_router(courses_router)
+app.include_router(topics_router)
+app.include_router(documents_router)
+app.include_router(conversations_router)
+app.include_router(progress_router)
+app.include_router(admin_router)
+
 # Get the path to the frontend build directory
 current_dir = Path(__file__).parent
 frontend_build_dir = current_dir.parent.parent / "frontend" / "build"
@@ -50,8 +69,22 @@ if frontend_build_dir.exists():
         StaticFiles(directory=str(frontend_build_dir / "assets")),
         name="assets",
     )
-logging_client = google_cloud_logging.Client()
-logger = logging_client.logger(__name__)
+# Cloud Logging — gracefully fall back to standard Python logging when
+# GCP credentials are unavailable (e.g. LOCAL_DEV mode).
+try:
+    logging_client = google_cloud_logging.Client()
+    logger = logging_client.logger(__name__)
+except Exception:
+    logging_client = None  # type: ignore[assignment]
+
+    class _StdLogger:
+        """Tiny adapter so ``logger.log_struct(...)`` works without GCP."""
+
+        @staticmethod
+        def log_struct(payload: dict, severity: str = "INFO") -> None:
+            logging.log(getattr(logging, severity, logging.INFO), "%s", payload)
+
+    logger = _StdLogger()  # type: ignore[assignment]
 logging.basicConfig(level=logging.INFO)
 
 # Initialize default configuration
@@ -60,7 +93,7 @@ app.state.config = {
     "remote_agent_engine_id": None,
     "project_id": None,
     "location": "europe-west1",
-    "local_agent_path": "..agent.root_agent",
+    "local_agent_path": "..agents.router_agent.root_agent",
     "agent_engine_object_path": "..agent_engine_app.agent_engine",
 }
 

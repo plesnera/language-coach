@@ -22,7 +22,7 @@ playground: build-frontend-if-needed
 	@echo "|                                                                             |"
 	@echo "| 🔍 IMPORTANT: Select the 'app' folder to interact with your agent.          |"
 	@echo "==============================================================================="
-	uv run python -m app.app_utils.expose_app --mode local --local-agent app.agent.root_agent
+	LOCAL_DEV=true uv run python -m app.app_utils.expose_app --mode local --local-agent app.agents.router_agent.root_agent
 
 # ==============================================================================
 # Local Development Commands
@@ -30,7 +30,7 @@ playground: build-frontend-if-needed
 
 # Launch local development server with hot-reload
 local-backend:
-	uv run python -m app.app_utils.expose_app --mode local --port 8000  --local-agent app.agent.root_agent
+	LOCAL_DEV=true uv run python -m app.app_utils.expose_app --mode local --port 8000  --local-agent app.agents.router_agent.root_agent
 
 # ==============================================================================
 # ADK Live Commands

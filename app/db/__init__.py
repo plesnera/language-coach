@@ -12,6 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .agents.router_agent import app
-
-__all__ = ["app"]
+"""Database access layer backed by Firestore."""

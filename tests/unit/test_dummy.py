@@ -12,27 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-You can add your unit tests here.
-This is where you test your business logic, including agent functionality,
-data processing, and other core components of your application.
+Unit tests for core modules.
 """
 
-from app.agent import get_weather
+
+def test_db_client_module_importable() -> None:
+    """Verify the Firestore client module can be imported."""
+    from app.db import client
+    assert hasattr(client, "get_firestore_client")
 
 
-def test_get_weather_san_francisco() -> None:
-    """Test get_weather function returns correct weather for San Francisco."""
-    result = get_weather("What's the weather in San Francisco?")
-    assert result == "It's 60 degrees and foggy."
+def test_prompt_loader_returns_default() -> None:
+    """prompt_loader should return the default when Firestore is unavailable."""
+    from app.agents.prompt_loader import load_prompt
+
+    result = load_prompt("es", "freestyle", "fallback")
+    assert result == "fallback"
 
 
-def test_get_weather_san_francisco_abbreviation() -> None:
-    """Test get_weather function returns correct weather for SF abbreviation."""
-    result = get_weather("weather in sf")
-    assert result == "It's 60 degrees and foggy."
+def test_system_prompt_types_defined() -> None:
+    """Verify PROMPT_TYPES constant is populated."""
+    from app.db.system_prompts import PROMPT_TYPES
 
-
-def test_get_weather_other_location() -> None:
-    """Test get_weather function returns default weather for other locations."""
-    result = get_weather("What's the weather in New York?")
-    assert result == "It's 90 degrees and sunny."
+    assert "beginner" in PROMPT_TYPES
+    assert "freestyle" in PROMPT_TYPES
+    assert "summarisation" in PROMPT_TYPES

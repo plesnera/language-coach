@@ -12,6 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .agents.router_agent import app
+"""User-facing topic endpoints (``/api/topics/``)."""
 
-__all__ = ["app"]
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Depends, Query
+
+from app.auth.dependencies import get_current_user
+from app.db import topics as topics_repo
+
+router = APIRouter(prefix="/api/topics", tags=["topics"])
+
+
+@router.get("/")
+def list_topics(
+    language_id: str = Query(...),
+    _user: dict[str, Any] = Depends(get_current_user),
+) -> list[dict[str, Any]]:
+    return topics_repo.list_by_language(language_id)
