@@ -1,47 +1,56 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import SessionPage from "../components/session/SessionPage";
 import { useAuth } from "../contexts/AuthContext";
-
-interface Topic {
-  id: string;
-  title: string;
-  description: string;
-}
+import SessionPage from "../components/session/SessionPage";
 
 const API_BASE = import.meta.env.DEV
   ? `http://${window.location.hostname}:8000`
   : "";
 
+interface TopicData {
+  id: string;
+  title: string;
+  description: string;
+  conversation_prompt: string;
+}
+
 const TopicSessionPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const [topic, setTopic] = useState<Topic | null>(null);
+  const [topic, setTopic] = useState<TopicData | null>(null);
 
   useEffect(() => {
-    const fetchTopic = async () => {
+    if (!id || !user?.token) return;
+    (async () => {
       try {
-        const res = await fetch(
-          `${API_BASE}/api/topics/?language_id=es`,
-          {
-            headers: { Authorization: `Bearer ${user?.token}` },
-          },
-        );
-        if (res.ok) {
-          const topics: Topic[] = await res.json();
-          setTopic(topics.find((t) => t.id === id) ?? null);
-        }
-      } catch (err) {
-        console.error("Failed to fetch topic", err);
+        const res = await fetch(`${API_BASE}/api/topics/${id}`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        if (res.ok) setTopic(await res.json());
+      } catch {
+        // topic stays null
       }
-    };
-    fetchTopic();
+    })();
   }, [id, user?.token]);
+
+  const systemContext = topic
+    ? [
+        `[TOPIC CONTEXT]`,
+        `Topic: ${topic.title}`,
+        `Description: ${topic.description}`,
+        ``,
+        `Conversation instructions:`,
+        topic.conversation_prompt,
+        ``,
+        `Begin with a short, friendly intro like: "Let's get going with our topic: ${topic.title}! Whenever you get stuck, just say it in English and I'll help you." Then guide the conversation according to the instructions above.`,
+      ].join("\n")
+    : undefined;
 
   return (
     <SessionPage
-      title={topic?.title ?? "Topic Conversation"}
+      title={topic?.title ?? "Loading\u2026"}
       subtitle={topic?.description}
+      systemContext={systemContext}
     />
   );
 };

@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 from app.auth.dependencies import require_admin
 from app.db import courses as courses_repo
+from app.db import images as images_repo
 from app.db import languages as lang_repo
 from app.db import system_prompts as prompts_repo
 from app.db import topics as topics_repo
@@ -111,6 +112,7 @@ class CreateLessonRequest(BaseModel):
     sort_order: int = 0
     source_audio_ref: str | None = None
     source_transcript: str | None = None
+    image_url: str | None = None
 
 
 @router.post("/courses/{course_id}/lessons", status_code=201)
@@ -127,6 +129,7 @@ class UpdateLessonRequest(BaseModel):
     sort_order: int | None = None
     source_audio_ref: str | None = None
     source_transcript: str | None = None
+    image_url: str | None = None
 
 
 @router.put("/courses/{course_id}/lessons/{lesson_id}")
@@ -302,6 +305,39 @@ def disable_user(uid: str, body: DisableUserRequest) -> dict[str, Any]:
     if result is None:
         raise HTTPException(404, "User not found")
     return result
+
+
+# ── Image Library ───────────────────────────────────────────────────────────
+
+
+@router.get("/images")
+def list_images() -> list[dict[str, Any]]:
+    return images_repo.list_all()
+
+
+@router.post("/images/upload", status_code=201)
+async def upload_image(file: UploadFile) -> dict[str, Any]:
+    """Upload an image file and add it to the library."""
+    import uuid as _uuid
+    from pathlib import Path
+
+    uploads_dir = Path(__file__).resolve().parent.parent.parent / "data" / "images"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+
+    ext = Path(file.filename or "image.png").suffix or ".png"
+    unique_name = f"{_uuid.uuid4().hex}{ext}"
+    dest = uploads_dir / unique_name
+
+    data = await file.read()
+    dest.write_bytes(data)
+
+    url = f"/uploads/images/{unique_name}"
+    record = images_repo.create(
+        filename=unique_name,
+        url=url,
+        original_name=file.filename or "unknown",
+    )
+    return record
 
 
 # ── Transcription ───────────────────────────────────────────────────────────

@@ -1,28 +1,58 @@
-/**
- * Copyright 2026 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,700;1,700&display=swap');
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@import 'tailwindcss';
+:root {
+  --color-red: #DC2626;
+  --color-amber: #F59E0B;
+  --color-bg: #FAFAF8;
+  --color-ink: #1A1A1A;
 }
-
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: 'Lora', serif;
+}
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+/* Hand-drawn utility classes */
+.hand-drawn-border {
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+}
+.hand-drawn-border-alt {
+  border-radius: 15px 255px 15px 225px / 255px 15px 225px 15px;
+}
+.hand-drawn-border-pill {
+  border-radius: 255px 245px 255px 245px / 245px 255px 245px 255px;
+}
+.hand-drawn-shadow {
+  box-shadow: 3px 4px 0px rgba(26, 26, 26, 1);
+}
+.hand-drawn-shadow-sm {
+  box-shadow: 2px 2px 0px rgba(26, 26, 26, 1);
+}
+/* Slight rotations for organic feel */
+.rotate-wobble-left {
+  transform: rotate(-0.5deg);
+}
+.rotate-wobble-right {
+  transform: rotate(0.5deg);
+}
+/* Custom scrollbar for freestyle chat */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-ink);
+  border-radius: 10px;
+  border: 2px solid var(--color-bg);
 }

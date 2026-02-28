@@ -42,3 +42,15 @@ def list_lessons(
     if courses_repo.get(course_id) is None:
         raise HTTPException(status_code=404, detail="Course not found")
     return courses_repo.list_lessons(course_id)
+
+
+@router.get("/{course_id}/lessons/{lesson_id}")
+def get_lesson(
+    course_id: str,
+    lesson_id: str,
+    _user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    lesson = courses_repo.get_lesson(course_id, lesson_id)
+    if lesson is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    return lesson

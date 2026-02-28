@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(150deg, #e8f0fe 0%, #d2e3fc 40%, #a8c7fa 100%);
-  color: #1a1a2e;
+  background-color: #FAFAF8;
+  color: #1A1A1A;
 }
 
 .session-header {
@@ -11,22 +11,25 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.5rem;
+  border-bottom: 2px solid #1A1A1A;
+  background-color: #FAFAF8;
 
   .back-button {
-    background: rgba(0, 0, 0, 0.06);
-    border: none;
-    border-radius: 50%;
+    background: white;
+    border: 2px solid #1A1A1A;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
     width: 40px;
     height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: #546e7a;
-    transition: background 0.2s;
+    color: #1A1A1A;
+    transition: all 0.2s;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.12);
+      background: #1A1A1A;
+      color: white;
     }
   }
 
@@ -34,14 +37,15 @@
     h1 {
       margin: 0;
       font-size: 1.25rem;
-      font-weight: 600;
-      color: #1a237e;
+      font-weight: 700;
+      font-family: 'Lora', serif;
+      color: #1A1A1A;
     }
 
     p {
       margin: 0.25rem 0 0;
       font-size: 0.85rem;
-      color: #5f6368;
+      color: #6b7280;
     }
   }
 }
@@ -52,7 +56,7 @@
   overflow-y: auto;
 
   p {
-    color: #455a64;
+    color: #6b7280;
   }
 }
 
@@ -60,4 +64,5 @@
   display: flex;
   justify-content: center;
   padding: 2rem;
+  border-top: 2px dashed rgba(26, 26, 26, 0.15);
 }

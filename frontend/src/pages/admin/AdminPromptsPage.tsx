@@ -1,190 +1,313 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { useAuth } from "../../contexts/AuthContext";
-
+import React, { useState } from 'react';
+import { Plus, Edit2, Trash2, FileText } from 'lucide-react';
+import { HandDrawnButton } from '../../components/HandDrawnButton';
+import { HandDrawnCard } from '../../components/HandDrawnCard';
+import { HandDrawnInput } from '../../components/HandDrawnInput';
+import { SquigglyLine } from '../../components/DoodleDecorations';
 interface Prompt {
   id: string;
-  language_id: string;
   type: string;
   name: string;
-  prompt_text: string;
-  is_active: boolean;
+  content: string;
+  isActive: boolean;
 }
+const initialPrompts: Prompt[] = [
+{
+  id: '1',
+  type: 'Global',
+  name: 'Base Persona',
+  content: 'You are a friendly, encouraging language coach...',
+  isActive: true
+},
+{
+  id: '2',
+  type: 'Global',
+  name: 'Strict Persona',
+  content: 'You are a strict grammar teacher...',
+  isActive: false
+},
+{
+  id: '3',
+  type: 'Freestyle',
+  name: 'Default Freestyle',
+  content: 'Engage the user in open conversation...',
+  isActive: true
+},
+{
+  id: '4',
+  type: 'Assessment',
+  name: 'Level Test',
+  content: "Evaluate the user's CEFR level based on...",
+  isActive: true
+}];
 
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : "";
-
-const PROMPT_TYPES = ["beginner", "topic", "freestyle", "summarisation"];
-
-const empty: Omit<Prompt, "id"> = {
-  language_id: "es",
-  type: "beginner",
-  name: "",
-  prompt_text: "",
-  is_active: false,
-};
-
-const AdminPromptsPage: React.FC = () => {
-  const { user } = useAuth();
-  const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [editing, setEditing] = useState<Partial<Prompt> | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const headers = useCallback(
-    () => ({
-      Authorization: `Bearer ${user?.token}`,
-      "Content-Type": "application/json",
-    }),
-    [user?.token],
-  );
-
-  const load = useCallback(async () => {
-    const res = await fetch(
-      `${API_BASE}/api/admin/prompts?language_id=es`,
-      { headers: headers() },
-    );
-    if (res.ok) setPrompts(await res.json());
-  }, [headers]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const save = async () => {
-    if (!editing) return;
-    setError(null);
-    const isNew = !editing.id;
-    const url = isNew
-      ? `${API_BASE}/api/admin/prompts`
-      : `${API_BASE}/api/admin/prompts/${editing.id}`;
-    const res = await fetch(url, {
-      method: isNew ? "POST" : "PUT",
-      headers: headers(),
-      body: JSON.stringify(
-        isNew
-          ? editing
-          : { name: editing.name, prompt_text: editing.prompt_text },
-      ),
-    });
-    if (!res.ok) {
-      const b = await res.json().catch(() => null);
-      setError(b?.detail || "Save failed");
-      return;
+export function AdminPromptsPage() {
+  const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPrompt, setCurrentPrompt] = useState<Partial<Prompt>>({});
+  const handleOpenModal = (prompt?: Prompt) => {
+    if (prompt) {
+      setCurrentPrompt(prompt);
+    } else {
+      setCurrentPrompt({
+        type: 'Global',
+        isActive: false
+      });
     }
-    setEditing(null);
-    load();
+    setIsModalOpen(true);
   };
-
-  const activate = async (id: string) => {
-    await fetch(`${API_BASE}/api/admin/prompts/${id}/activate`, {
-      method: "POST",
-      headers: headers(),
-    });
-    load();
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCurrentPrompt({});
   };
-
-  const remove = async (id: string) => {
-    if (!confirm("Delete this prompt?")) return;
-    await fetch(`${API_BASE}/api/admin/prompts/${id}`, {
-      method: "DELETE",
-      headers: headers(),
-    });
-    load();
+  const handleSave = () => {
+    if (currentPrompt.id) {
+      // If setting active, deactivate others of same type
+      let updatedPrompts = [...prompts];
+      if (currentPrompt.isActive) {
+        updatedPrompts = updatedPrompts.map((p) =>
+        p.type === currentPrompt.type ?
+        {
+          ...p,
+          isActive: false
+        } :
+        p
+        );
+      }
+      setPrompts(
+        updatedPrompts.map((p) =>
+        p.id === currentPrompt.id ?
+        {
+          ...p,
+          ...currentPrompt
+        } as Prompt :
+        p
+        )
+      );
+    } else {
+      let updatedPrompts = [...prompts];
+      if (currentPrompt.isActive) {
+        updatedPrompts = updatedPrompts.map((p) =>
+        p.type === currentPrompt.type ?
+        {
+          ...p,
+          isActive: false
+        } :
+        p
+        );
+      }
+      const newPrompt: Prompt = {
+        ...currentPrompt,
+        id: Math.random().toString(36).substr(2, 9)
+      } as Prompt;
+      setPrompts([...updatedPrompts, newPrompt]);
+    }
+    handleCloseModal();
   };
-
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to delete this prompt?')) {
+      setPrompts(prompts.filter((p) => p.id !== id));
+    }
+  };
+  const toggleActive = (id: string, type: string) => {
+    setPrompts(
+      prompts.map((p) => {
+        if (p.id === id)
+        return {
+          ...p,
+          isActive: true
+        };
+        if (p.type === type)
+        return {
+          ...p,
+          isActive: false
+        };
+        return p;
+      })
+    );
+  };
   // Group prompts by type
-  const grouped = PROMPT_TYPES.map((type) => ({
-    type,
-    items: prompts.filter((p) => p.type === type),
-  }));
-
+  const groupedPrompts = prompts.reduce(
+    (acc, prompt) => {
+      if (!acc[prompt.type]) acc[prompt.type] = [];
+      acc[prompt.type].push(prompt);
+      return acc;
+    },
+    {} as Record<string, Prompt[]>
+  );
   return (
-    <div className="admin-page">
-      <h1>System Prompts</h1>
-      <div className="admin-toolbar">
-        <span>{prompts.length} prompt(s)</span>
-        <button className="admin-btn" onClick={() => setEditing({ ...empty })}>
-          <span className="material-symbols-outlined">add</span> New Prompt
-        </button>
+    <div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div className="relative inline-block">
+          <h1 className="font-heading text-3xl md:text-4xl font-bold text-[#1A1A1A]">
+            System Prompts
+          </h1>
+          <SquigglyLine className="absolute -bottom-2 left-0 w-full h-2 text-[#1A1A1A]" />
+        </div>
+        <HandDrawnButton
+          variant="primary"
+          onClick={() => handleOpenModal()}
+          className="shrink-0">
+
+          <Plus size={18} /> Add Prompt
+        </HandDrawnButton>
       </div>
 
-      {error && <p className="admin-error">{error}</p>}
+      <div className="space-y-8">
+        {Object.entries(groupedPrompts).map(([type, typePrompts]) =>
+        <div
+          key={type}
+          className="bg-white border-2 border-[#1A1A1A] hand-drawn-border-alt hand-drawn-shadow overflow-hidden">
 
-      {editing && (
-        <div className="admin-card">
-          <div className="admin-form">
-            {!editing.id && (
-              <>
-                <label>Type</label>
-                <select
-                  value={editing.type ?? "beginner"}
-                  onChange={(e) => setEditing({ ...editing, type: e.target.value })}
-                >
-                  {PROMPT_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </>
+            <div className="bg-[#FAFAF8] p-4 border-b-2 border-[#1A1A1A] flex items-center gap-2">
+              <FileText size={20} />
+              <h2 className="font-heading font-bold text-xl">{type} Prompts</h2>
+            </div>
+            <div className="p-4 space-y-4">
+              {typePrompts.map((prompt) =>
+            <div
+              key={prompt.id}
+              className={`p-4 border-2 border-[#1A1A1A] hand-drawn-border ${prompt.isActive ? 'bg-[#10B981]/10 border-[#10B981]' : 'bg-white'}`}>
+
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-lg">{prompt.name}</h3>
+                      {prompt.isActive &&
+                  <span className="text-xs font-bold px-2 py-1 bg-[#10B981] text-white hand-drawn-border-pill border-2 border-[#1A1A1A]">
+                          ACTIVE
+                        </span>
+                  }
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!prompt.isActive &&
+                  <button
+                    onClick={() => toggleActive(prompt.id, prompt.type)}
+                    className="text-sm font-bold px-3 py-1 border-2 border-[#1A1A1A] hand-drawn-border-pill hover:bg-gray-100 transition-colors">
+
+                          Set Active
+                        </button>
+                  }
+                      <button
+                    onClick={() => handleOpenModal(prompt)}
+                    className="p-1.5 hover:bg-gray-200 rounded-full transition-colors border-2 border-transparent hover:border-[#1A1A1A] hand-drawn-border">
+
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                    onClick={() => handleDelete(prompt.id)}
+                    className="p-1.5 hover:bg-red-100 text-[#DC2626] rounded-full transition-colors border-2 border-transparent hover:border-[#DC2626] hand-drawn-border">
+
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm font-mono text-gray-600 bg-gray-50 p-3 border-2 border-dashed border-gray-200 hand-drawn-border-alt">
+                    {prompt.content}
+                  </p>
+                </div>
             )}
-            <label>Name</label>
-            <input
-              value={editing.name ?? ""}
-              onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-            />
-            <label>Prompt Text</label>
-            <textarea
-              rows={10}
-              value={editing.prompt_text ?? ""}
-              onChange={(e) => setEditing({ ...editing, prompt_text: e.target.value })}
-            />
-            <div className="admin-form-actions">
-              <button className="admin-btn" onClick={save}>Save</button>
-              <button className="admin-btn secondary" onClick={() => setEditing(null)}>Cancel</button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {grouped.map(({ type, items }) => (
-        <div key={type} style={{ marginBottom: "1.5rem" }}>
-          <h2 style={{ fontSize: "1rem", color: "#5f6368", textTransform: "capitalize", margin: "0 0 0.5rem" }}>
-            {type}
-          </h2>
-          {items.length === 0 ? (
-            <p className="admin-empty" style={{ padding: "1rem" }}>No {type} prompts.</p>
-          ) : (
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Active</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.name}</td>
-                    <td>
-                      {p.is_active ? (
-                        <span style={{ color: "#1e8e3e", fontWeight: 600 }}>Active</span>
-                      ) : (
-                        <button className="admin-btn small secondary" onClick={() => activate(p.id)}>
-                          Activate
-                        </button>
-                      )}
-                    </td>
-                    <td>
-                      <button className="admin-btn small" onClick={() => setEditing(p)}>Edit</button>{" "}
-                      <button className="admin-btn small danger" onClick={() => remove(p.id)}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
+      {/* Create/Edit Modal */}
+      {isModalOpen &&
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <HandDrawnCard className="w-full max-w-2xl bg-white" rotate="none">
+            <h2 className="font-heading text-2xl font-bold mb-6">
+              {currentPrompt.id ? 'Edit Prompt' : 'Create New Prompt'}
+            </h2>
 
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <HandDrawnInput
+                label="Prompt Name"
+                value={currentPrompt.name || ''}
+                onChange={(e) =>
+                setCurrentPrompt({
+                  ...currentPrompt,
+                  name: e.target.value
+                })
+                }
+                placeholder="e.g., Base Persona" />
+
+
+                <div className="flex flex-col gap-2">
+                  <label className="font-heading font-bold text-[#1A1A1A] text-lg">
+                    Type
+                  </label>
+                  <select
+                  className="w-full bg-transparent border-2 border-[#1A1A1A] hand-drawn-border-alt px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/50"
+                  value={currentPrompt.type || 'Global'}
+                  onChange={(e) =>
+                  setCurrentPrompt({
+                    ...currentPrompt,
+                    type: e.target.value
+                  })
+                  }>
+
+                    <option>Global</option>
+                    <option>Freestyle</option>
+                    <option>Assessment</option>
+                    <option>Correction</option>
+                  </select>
+                </div>
+              </div>
+
+              <HandDrawnInput
+              label="Prompt Content"
+              multiline
+              rows={8}
+              value={currentPrompt.content || ''}
+              onChange={(e) =>
+              setCurrentPrompt({
+                ...currentPrompt,
+                content: e.target.value
+              })
+              }
+              placeholder="System instructions..."
+              className="font-mono text-sm" />
+
+
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                type="checkbox"
+                id="active-toggle"
+                className="w-5 h-5 border-2 border-[#1A1A1A] rounded-sm accent-[#1A1A1A]"
+                checked={currentPrompt.isActive || false}
+                onChange={(e) =>
+                setCurrentPrompt({
+                  ...currentPrompt,
+                  isActive: e.target.checked
+                })
+                } />
+
+                <label
+                htmlFor="active-toggle"
+                className="font-bold cursor-pointer">
+
+                  Set as Active (will deactivate others of this type)
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8">
+              <HandDrawnButton variant="outline" onClick={handleCloseModal}>
+                Cancel
+              </HandDrawnButton>
+              <HandDrawnButton
+              variant="primary"
+              onClick={handleSave}
+              disabled={!currentPrompt.name || !currentPrompt.content}>
+
+                Save Prompt
+              </HandDrawnButton>
+            </div>
+          </HandDrawnCard>
+        </div>
+      }
+    </div>);
+
+}
 export default AdminPromptsPage;

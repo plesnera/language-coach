@@ -15,6 +15,7 @@
 import asyncio
 import json
 import logging
+import os
 import uuid
 from collections.abc import Callable
 from pathlib import Path
@@ -58,9 +59,33 @@ app.include_router(conversations_router)
 app.include_router(progress_router)
 app.include_router(admin_router)
 
+
+@app.on_event("startup")
+def _seed_default_data() -> None:
+    """Ensure seed data exists so the app is usable out of the box."""
+    from app.db import courses as courses_repo
+    from app.db import languages as lang_repo
+    from app.db import topics as topics_repo
+
+    try:
+        lang_repo.seed_defaults()
+        courses_repo.seed_defaults()
+        topics_repo.seed_defaults()
+    except Exception:
+        logging.exception("Failed to seed default data (non-fatal)")
+
 # Get the path to the frontend build directory
 current_dir = Path(__file__).parent
 frontend_build_dir = current_dir.parent.parent / "frontend" / "build"
+
+# Mount image uploads directory (stored under data/ in dev mode)
+images_dir = current_dir.parent.parent / "data" / "images"
+images_dir.mkdir(parents=True, exist_ok=True)
+app.mount(
+    "/uploads/images",
+    StaticFiles(directory=str(images_dir)),
+    name="uploads-images",
+)
 
 # Mount assets if build directory exists
 if frontend_build_dir.exists():
@@ -382,37 +407,35 @@ def collect_feedback(feedback: Feedback) -> dict[str, str]:
     return {"status": "success"}
 
 
-@app.get("/")
-async def serve_frontend_root() -> FileResponse:
-    """Serve the frontend index.html at the root path."""
-    index_file = frontend_build_dir / "index.html"
-    if index_file.exists():
-        return FileResponse(str(index_file))
-    raise HTTPException(
-        status_code=404,
-        detail="Frontend not built. Run 'npm run build' in the frontend directory.",
-    )
+# In LOCAL_DEV mode the frontend is served by Vite on a separate port,
+# so we skip the SPA catch-all to avoid shadowing API 404s.
+_LOCAL_DEV = os.environ.get("LOCAL_DEV", "").lower() in ("1", "true", "yes")
 
+if not _LOCAL_DEV:
 
-@app.get("/{full_path:path}")
-async def serve_frontend_spa(full_path: str) -> FileResponse:
-    """Catch-all route to serve the frontend for SPA routing.
+    @app.get("/")
+    async def serve_frontend_root() -> FileResponse:
+        """Serve the frontend index.html at the root path."""
+        index_file = frontend_build_dir / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file))
+        raise HTTPException(
+            status_code=404,
+            detail="Frontend not built. Run 'npm run build' in the frontend directory.",
+        )
 
-    This ensures that client-side routes are handled by the React app.
-    Excludes API routes (ws, feedback) and assets.
-    """
-    # Don't intercept API routes
-    if full_path.startswith(("ws", "feedback", "assets", "api")):
-        raise HTTPException(status_code=404, detail="Not found")
-
-    # Serve index.html for all other routes (SPA routing)
-    index_file = frontend_build_dir / "index.html"
-    if index_file.exists():
-        return FileResponse(str(index_file))
-    raise HTTPException(
-        status_code=404,
-        detail="Frontend not built. Run 'npm run build' in the frontend directory.",
-    )
+    @app.get("/{full_path:path}")
+    async def serve_frontend_spa(full_path: str) -> FileResponse:
+        """Catch-all route to serve the frontend for SPA routing."""
+        if full_path.startswith(("ws", "feedback", "assets", "api", "uploads")):
+            raise HTTPException(status_code=404, detail="Not found")
+        index_file = frontend_build_dir / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file))
+        raise HTTPException(
+            status_code=404,
+            detail="Frontend not built. Run 'npm run build' in the frontend directory.",
+        )
 
 
 # Main execution

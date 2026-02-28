@@ -32,3 +32,16 @@ def list_topics(
     _user: dict[str, Any] = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     return topics_repo.list_by_language(language_id)
+
+
+@router.get("/{topic_id}")
+def get_topic(
+    topic_id: str,
+    _user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    topic = topics_repo.get(topic_id)
+    if topic is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Topic not found")
+    return topic

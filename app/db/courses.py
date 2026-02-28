@@ -132,6 +132,7 @@ def create_lesson(
     sort_order: int = 0,
     source_audio_ref: str | None = None,
     source_transcript: str | None = None,
+    image_url: str | None = None,
 ) -> dict[str, Any]:
     db = get_firestore_client()
     now = datetime.now(timezone.utc)
@@ -142,6 +143,7 @@ def create_lesson(
         "sort_order": sort_order,
         "source_audio_ref": source_audio_ref,
         "source_transcript": source_transcript,
+        "image_url": image_url,
         "created_at": now,
         "updated_at": now,
     }
@@ -181,3 +183,61 @@ def delete_lesson(course_id: str, lesson_id: str) -> bool:
         return False
     ref.delete()
     return True
+
+
+def seed_defaults() -> None:
+    """Create a default Spanish beginner course with starter lessons if none exist."""
+    if list_by_language("es"):
+        return
+
+    course = create(
+        language_id="es",
+        title="Spanish for Beginners",
+        description="Build a solid foundation in everyday Spanish.",
+        sort_order=1,
+    )
+    lessons = [
+        {
+            "title": "Greetings & Introductions",
+            "objective": "Learn how to say hello, goodbye and introduce yourself.",
+            "teaching_prompt": (
+                "You are a friendly Spanish tutor. Teach the student basic "
+                "greetings (hola, buenos días, buenas tardes, buenas noches) "
+                "and how to introduce themselves (me llamo…, soy…). Keep it "
+                "simple, encouraging, and conversational."
+            ),
+            "sort_order": 1,
+        },
+        {
+            "title": "Numbers & Counting",
+            "objective": "Count from 1 to 100 and use numbers in context.",
+            "teaching_prompt": (
+                "You are a friendly Spanish tutor. Teach the student numbers "
+                "from 1–100. Practice by asking them their age, phone number, "
+                "or prices. Gently correct pronunciation."
+            ),
+            "sort_order": 2,
+        },
+        {
+            "title": "At the Restaurant",
+            "objective": "Order food and drinks at a restaurant.",
+            "teaching_prompt": (
+                "You are a friendly Spanish tutor. Role-play ordering at a "
+                "restaurant. Teach key phrases: me gustaría…, la cuenta por "
+                "favor, ¿qué recomienda? Introduce food vocabulary."
+            ),
+            "sort_order": 3,
+        },
+        {
+            "title": "Asking for Directions",
+            "objective": "Navigate a city and understand basic directions.",
+            "teaching_prompt": (
+                "You are a friendly Spanish tutor. Teach directional vocabulary "
+                "(izquierda, derecha, todo recto, cerca, lejos) and phrases "
+                "like ¿dónde está…? Practice with a role-play scenario."
+            ),
+            "sort_order": 4,
+        },
+    ]
+    for lesson in lessons:
+        create_lesson(course["id"], **lesson)
