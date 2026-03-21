@@ -66,6 +66,7 @@ def _seed_default_data() -> None:
     from app.db import courses as courses_repo
     from app.db import languages as lang_repo
     from app.db import topics as topics_repo
+    from app.db import images as images_repo
 
     try:
         lang_repo.seed_defaults()

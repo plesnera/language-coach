@@ -55,6 +55,7 @@ def create(
     title: str,
     description: str,
     conversation_prompt: str,
+    image_url: str | None = None,
     sort_order: int = 0,
     is_default: bool = False,
 ) -> dict[str, Any]:
@@ -65,6 +66,7 @@ def create(
         "title": title,
         "description": description,
         "conversation_prompt": conversation_prompt,
+        "image_url": image_url,
         "sort_order": sort_order,
         "is_default": is_default,
         "created_at": now,
@@ -99,6 +101,8 @@ def seed_defaults() -> None:
     if list_by_language("es"):
         return
 
+    from app.db.images import get_or_upload_seed_image
+
     defaults = [
         {
             "title": "What I did on my last vacation",
@@ -111,6 +115,7 @@ def seed_defaults() -> None:
                 "Gently correct mistakes and provide the Spanish translation when "
                 "the user struggles."
             ),
+            "image_url": get_or_upload_seed_image("375bb32ff0164c3d9923b0b5328ad995.jpg"),
             "sort_order": 1,
         },
         {
@@ -123,6 +128,7 @@ def seed_defaults() -> None:
                 "possessive adjectives, descriptive adjectives, and the verbs "
                 "ser/estar. Gently correct mistakes."
             ),
+            "image_url": get_or_upload_seed_image("2ecdf8f52bf84707bc11242a6a5bf02f.jpg"),
             "sort_order": 2,
         },
         {
@@ -136,6 +142,7 @@ def seed_defaults() -> None:
                 "professions, daily routine verbs, and time expressions. "
                 "Gently correct mistakes."
             ),
+            "image_url": get_or_upload_seed_image("75ddbd3b5d8c410180ffcf146c7360dc.jpg"),
             "sort_order": 3,
         },
     ]
@@ -145,6 +152,7 @@ def seed_defaults() -> None:
             title=topic["title"],
             description=topic["description"],
             conversation_prompt=topic["conversation_prompt"],
+            image_url=topic.get("image_url", ""),
             sort_order=topic["sort_order"],
             is_default=True,
         )

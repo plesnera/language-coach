@@ -190,6 +190,8 @@ def seed_defaults() -> None:
     if list_by_language("es"):
         return
 
+    from app.db.images import get_or_upload_seed_image
+
     course = create(
         language_id="es",
         title="Spanish for Beginners",
@@ -206,6 +208,7 @@ def seed_defaults() -> None:
                 "and how to introduce themselves (me llamo…, soy…). Keep it "
                 "simple, encouraging, and conversational."
             ),
+            "image_url": get_or_upload_seed_image("caballeros.jpg"),
             "sort_order": 1,
         },
         {
@@ -216,6 +219,7 @@ def seed_defaults() -> None:
                 "from 1–100. Practice by asking them their age, phone number, "
                 "or prices. Gently correct pronunciation."
             ),
+            "image_url": get_or_upload_seed_image("castagnettes.jpg"),
             "sort_order": 2,
         },
         {
@@ -226,6 +230,7 @@ def seed_defaults() -> None:
                 "restaurant. Teach key phrases: me gustaría…, la cuenta por "
                 "favor, ¿qué recomienda? Introduce food vocabulary."
             ),
+            "image_url": get_or_upload_seed_image("cheese.jpg"),
             "sort_order": 3,
         },
         {
@@ -236,6 +241,7 @@ def seed_defaults() -> None:
                 "(izquierda, derecha, todo recto, cerca, lejos) and phrases "
                 "like ¿dónde está…? Practice with a role-play scenario."
             ),
+            "image_url": get_or_upload_seed_image("75ddbd3b5d8c410180ffcf146c7360dc.jpg"),
             "sort_order": 4,
         },
     ]

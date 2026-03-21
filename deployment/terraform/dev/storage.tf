@@ -26,4 +26,19 @@ resource "google_storage_bucket" "logs_data_bucket" {
   depends_on = [resource.google_project_service.services]
 }
 
+resource "google_storage_bucket" "images_bucket" {
+  name                        = "${var.dev_project_id}-${var.project_name}-images"
+  location                    = var.region
+  project                     = var.dev_project_id
+  uniform_bucket_level_access = true
+
+  depends_on = [resource.google_project_service.services]
+}
+
+resource "google_storage_bucket_iam_member" "public_images_dev" {
+  bucket = google_storage_bucket.images_bucket.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}
+
 

@@ -452,14 +452,9 @@ export class MultimodalLiveClient extends EventEmitter<MultimodalLiveClientEvent
         },
       };
 
-      // For remote mode: wrap first content in {user_id, live_request} format
-      if (!this.firstContentSent) {
-        data = {
-          user_id: this.userId || "default_user",
-          live_request: data,
-        };
-        this.firstContentSent = true;
-      }
+      // For remote mode, the backend already expects a LiveRequest which has a 'blob' field.
+      // Do not wrap it in {user_id, live_request} because the backend loop expects standard LiveRequest JSON.
+      // The initial setupMessage sends the user_id upon connection.
 
       this._sendDirect(data);
     }
@@ -493,14 +488,8 @@ export class MultimodalLiveClient extends EventEmitter<MultimodalLiveClientEvent
       content: content,
     };
 
-    // For remote mode: wrap first content in {user_id, live_request} format
-    if (!this.firstContentSent) {
-      data = {
-        user_id: this.userId || "default_user",
-        live_request: data,
-      };
-      this.firstContentSent = true;
-    }
+    // For remote mode, the backend loop expects standard LiveRequest JSON.
+    // The initial setupMessage sent during connect() provides the user_id.
 
     this._sendDirect(data);
     this.log(`client.send`, `content with ${parts.length} parts`);

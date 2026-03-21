@@ -39,6 +39,7 @@ interface Lesson {
   objective: string;
   teaching_prompt: string;
   sort_order: number;
+  image_url?: string;
 }
 
 interface Topic {
@@ -48,6 +49,7 @@ interface Topic {
   description: string;
   conversation_prompt: string;
   sort_order: number;
+  image_url?: string;
 }
 
 interface CourseProgress {
@@ -369,6 +371,13 @@ export function LearnPage() {
                                 >
                                   {completed ? '✓' : idx + 1}
                                 </div>
+                                {lesson.image_url && (
+                                  <img 
+                                    src={`${API_BASE}${lesson.image_url}`} 
+                                    alt={lesson.title} 
+                                    className="w-16 h-16 object-cover rounded-md border-2 border-[#1A1A1A] hand-drawn-border shrink-0"
+                                  />
+                                )}
                                 <div>
                                   <h3 className="font-heading text-xl font-bold mb-1">
                                     {lesson.title}
@@ -424,6 +433,15 @@ export function LearnPage() {
                         rotate={idx % 2 === 0 ? 'left' : 'right'}
                         className="flex flex-col h-full"
                       >
+                        {topic.image_url && (
+                          <div className="w-full h-32 mb-4 border-2 border-[#1A1A1A] hand-drawn-border overflow-hidden rounded-md shrink-0">
+                            <img
+                              src={`${API_BASE}${topic.image_url}`}
+                              alt={topic.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
                         <h3 className="font-heading text-xl font-bold mb-2">
                           {topic.title}
                         </h3>

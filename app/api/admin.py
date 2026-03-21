@@ -174,6 +174,7 @@ class CreateTopicRequest(BaseModel):
     description: str
     conversation_prompt: str
     sort_order: int = 0
+    image_url: str | None = None
 
 
 @router.post("/topics", status_code=201)
@@ -186,6 +187,7 @@ class UpdateTopicRequest(BaseModel):
     description: str | None = None
     conversation_prompt: str | None = None
     sort_order: int | None = None
+    image_url: str | None = None
 
 
 @router.put("/topics/{topic_id}")
@@ -318,20 +320,30 @@ def list_images() -> list[dict[str, Any]]:
 @router.post("/images/upload", status_code=201)
 async def upload_image(file: UploadFile) -> dict[str, Any]:
     """Upload an image file and add it to the library."""
+    import os
     import uuid as _uuid
     from pathlib import Path
 
-    uploads_dir = Path(__file__).resolve().parent.parent.parent / "data" / "images"
-    uploads_dir.mkdir(parents=True, exist_ok=True)
-
     ext = Path(file.filename or "image.png").suffix or ".png"
     unique_name = f"{_uuid.uuid4().hex}{ext}"
-    dest = uploads_dir / unique_name
-
     data = await file.read()
-    dest.write_bytes(data)
 
-    url = f"/uploads/images/{unique_name}"
+    bucket_name = os.environ.get("IMAGES_BUCKET_NAME")
+    if bucket_name:
+        from google.cloud import storage
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(unique_name)
+        content_type = file.content_type or "application/octet-stream"
+        blob.upload_from_string(data, content_type=content_type)
+        url = f"https://storage.googleapis.com/{bucket_name}/{unique_name}"
+    else:
+        uploads_dir = Path(__file__).resolve().parent.parent.parent / "data" / "images"
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+        dest = uploads_dir / unique_name
+        dest.write_bytes(data)
+        url = f"/uploads/images/{unique_name}"
+
     record = images_repo.create(
         filename=unique_name,
         url=url,

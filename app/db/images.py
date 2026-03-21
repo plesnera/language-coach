@@ -41,3 +41,26 @@ def create(filename: str, url: str, original_name: str) -> dict[str, Any]:
     ref = db.collection(COLLECTION).document()
     ref.set(data)
     return {"id": ref.id, **data}
+
+def get_or_upload_seed_image(local_filename: str) -> str:
+    """Helper to get a public URL for a seed image, uploading to GCS if configured."""
+    import os
+    from pathlib import Path
+
+    bucket_name = os.environ.get("IMAGES_BUCKET_NAME")
+    if not bucket_name:
+        return f"/uploads/images/{local_filename}"
+
+    from google.cloud import storage
+
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(local_filename)
+    
+    if not blob.exists():
+        uploads_dir = Path(__file__).resolve().parent.parent.parent / "data" / "images"
+        local_path = uploads_dir / local_filename
+        if local_path.exists():
+            blob.upload_from_filename(str(local_path), content_type="image/jpeg")
+            
+    return f"https://storage.googleapis.com/{bucket_name}/{local_filename}"
