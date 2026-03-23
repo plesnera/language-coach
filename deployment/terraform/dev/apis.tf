@@ -20,8 +20,10 @@ locals {
     "bigquery.googleapis.com",
     "discoveryengine.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "firebase.googleapis.com",
+    "identitytoolkit.googleapis.com",
     "iam.googleapis.com",
-    "bigquery.googleapis.com",
+    "secretmanager.googleapis.com",
     "serviceusage.googleapis.com",
     "logging.googleapis.com",
     "cloudtrace.googleapis.com",
@@ -37,7 +39,6 @@ resource "google_project_service" "services" {
 }
 
 resource "google_project_service_identity" "vertex_sa" {
-  provider = google-beta
   project = var.dev_project_id
   service = "aiplatform.googleapis.com"
 }

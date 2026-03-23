@@ -22,11 +22,19 @@ import google.auth
 import vertexai
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
-_, project_id = google.auth.default()
-os.environ.setdefault("GOOGLE_CLOUD_PROJECT", project_id)
-os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "europe-west1")
+# Prefer project/location from .env; fall back to google.auth.default()
+project_id = (
+    os.environ.get("GOOGLE_CLOUD_PROJECT_ID")
+    or os.environ.get("GOOGLE_CLOUD_PROJECT")
+)
+if not project_id:
+    _, project_id = google.auth.default()
+
+location = os.environ.get("GOOGLE_CLOUD_LOCATION", "europe-west1")
+
+os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
 os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "True")
 
-vertexai.init(project=project_id, location="europe-west1")
+vertexai.init(project=project_id, location=location)

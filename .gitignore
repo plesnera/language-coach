@@ -111,6 +111,8 @@ frontend/build/
 frontend/dist/
 frontend/.vite/
 frontend/.vite-temp/
+frontend/test-results/
+frontend/playwright-report/
 
 # Data and uploads
 data/uploads/

@@ -70,12 +70,12 @@ ui:
 # Launch dev playground with both frontend and backend hot-reload
 playground-dev:
 	@echo "==============================================================================="
-	@echo "| 🚀 Starting your agent playground in DEV MODE...                           |"
-	@echo "|                                                                             |"
+	@echo "| 🚀 Starting language coach in DEV MODE...                                  |"
+	@echo "|                                                                            |"
 	@echo "| 🌐 Frontend: http://localhost:8501                                         |"
 	@echo "| 🌐 Backend:  http://localhost:8000                                         |"
-	@echo "| 💡 Try asking: What's the weather in San Francisco?                         |"
-	@echo "| 🔄 Both frontend and backend will auto-reload on changes                    |"
+	@echo "| 💡 When running in dev mode you don't have to authenticate                 |"
+	@echo "| 🔄 Both frontend and backend will auto-reload on changes                   |"
 	@echo "==============================================================================="
 	@echo "Starting backend server..."
 	$(MAKE) local-backend &

@@ -8,10 +8,8 @@ import {
   SquigglyLine,
   BookDoodle,
   GlobeDoodle,
-  SpeechBubble,
-  MicrophoneDoodle,
 } from '../components/DoodleDecorations';
-import { ChevronRight, Loader2, BookOpen, MessageSquare, Mic } from 'lucide-react';
+import { ChevronRight, Loader2 } from 'lucide-react';
 
 const API_BASE = import.meta.env.DEV
   ? `http://${window.location.hostname}:8000`
@@ -42,16 +40,6 @@ interface Lesson {
   image_url?: string;
 }
 
-interface Topic {
-  id: string;
-  language_id: string;
-  title: string;
-  description: string;
-  conversation_prompt: string;
-  sort_order: number;
-  image_url?: string;
-}
-
 interface CourseProgress {
   id: string; // course_id
   current_lesson_index: number;
@@ -66,8 +54,6 @@ interface ProgressData {
   sessions_by_mode: Record<string, number>;
   course_progress: CourseProgress[];
 }
-
-type Mode = 'lessons' | 'topics' | 'freestyle';
 
 /** Simple flag lookup by language name. */
 const FLAG_MAP: Record<string, string> = {
@@ -86,12 +72,6 @@ const FLAG_MAP: Record<string, string> = {
 };
 const getFlag = (name: string) => FLAG_MAP[name.toLowerCase()] ?? '🌍';
 
-const MODE_TABS: { key: Mode; label: string; icon: React.ReactNode }[] = [
-  { key: 'lessons', label: 'Lessons', icon: <BookOpen size={18} /> },
-  { key: 'topics', label: 'Topics', icon: <MessageSquare size={18} /> },
-  { key: 'freestyle', label: 'Freestyle', icon: <Mic size={18} /> },
-];
-
 export function LearnPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -102,15 +82,10 @@ export function LearnPage() {
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>('lessons');
 
-  // ---- Lessons state ----
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
-
-  // ---- Topics state ----
-  const [topics, setTopics] = useState<Topic[]>([]);
 
   const headers = { Authorization: `Bearer ${user?.token}` };
 
@@ -141,16 +116,16 @@ export function LearnPage() {
     loadInitial();
   }, [loadInitial]);
 
-  // ---- Fetch courses + topics when selected language changes ----
+  // ---- Fetch courses when selected language changes ----
   useEffect(() => {
     if (!selectedLangId) return;
     let cancelled = false;
     (async () => {
       try {
-        const [coursesRes, topicsRes] = await Promise.all([
-          fetch(`${API_BASE}/api/courses/?language_id=${selectedLangId}`, { headers }),
-          fetch(`${API_BASE}/api/topics/?language_id=${selectedLangId}`, { headers }),
-        ]);
+        const coursesRes = await fetch(
+          `${API_BASE}/api/courses/?language_id=${selectedLangId}`,
+          { headers },
+        );
         if (!cancelled) {
           if (coursesRes.ok) {
             const data: Course[] = await coursesRes.json();
@@ -159,11 +134,6 @@ export function LearnPage() {
           } else {
             setCourses([]);
             setSelectedCourseId(null);
-          }
-          if (topicsRes.ok) {
-            setTopics(await topicsRes.json());
-          } else {
-            setTopics([]);
           }
         }
       } catch (err: any) {
@@ -279,215 +249,110 @@ export function LearnPage() {
           )}
         </div>
 
-        {/* ---- Mode tabs ---- */}
         {selectedLang && (
-          <>
-            <div className="flex gap-2 mb-10 border-b-2 border-[#1A1A1A]/10 pb-1">
-              {MODE_TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setMode(tab.key)}
-                  className={`
-                    flex items-center gap-2 px-5 py-3 font-heading text-lg font-bold
-                    border-b-3 transition-colors -mb-[3px]
-                    ${mode === tab.key
-                      ? 'border-[#DC2626] text-[#1A1A1A]'
-                      : 'border-transparent text-gray-400 hover:text-gray-600'
-                    }
-                  `}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* ---- LESSONS TAB ---- */}
-            {mode === 'lessons' && (
-              <div>
-                {/* Course selector */}
-                {courses.length > 1 && (
-                  <div className="mb-8 flex flex-wrap gap-3">
-                    {courses.map((course) => (
-                      <HandDrawnButton
-                        key={course.id}
-                        variant={course.id === selectedCourseId ? 'primary' : 'outline'}
-                        onClick={() => setSelectedCourseId(course.id)}
-                      >
-                        {course.title}
-                      </HandDrawnButton>
-                    ))}
-                  </div>
-                )}
-
-                {selectedCourse ? (
-                  <>
-                    <div className="flex items-center justify-between mb-8">
-                      <div>
-                        <h2 className="font-heading text-3xl font-bold text-[#1A1A1A]">
-                          {selectedCourse.title}
-                        </h2>
-                        {selectedCourse.description && (
-                          <p className="text-gray-600 mt-1">{selectedCourse.description}</p>
-                        )}
-                      </div>
-                      {courses.length > 1 && (
-                        <div className="flex gap-2">
-                          {courses.map((c) => (
-                            <span
-                              key={c.id}
-                              className={`w-3 h-3 rounded-full ${
-                                c.id === selectedCourseId ? 'bg-[#1A1A1A]' : 'bg-gray-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {lessons.length === 0 ? (
-                      <p className="text-gray-500">No lessons in this course yet.</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {lessons.map((lesson, idx) => {
-                          const completed = isLessonCompleted(idx, selectedCourse.id);
-                          return (
-                            <HandDrawnCard
-                              key={lesson.id}
-                              rotate={
-                                idx % 3 === 0 ? 'left' : idx % 2 === 0 ? 'right' : 'none'
-                              }
-                              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                                completed ? 'opacity-75 bg-gray-50' : ''
-                              }`}
-                            >
-                              <div className="flex items-start gap-4">
-                                <div
-                                  className={`w-10 h-10 rounded-full border-2 border-[#1A1A1A] flex items-center justify-center font-bold shrink-0 ${
-                                    completed
-                                      ? 'bg-[#1A1A1A] text-white'
-                                      : 'bg-white'
-                                  }`}
-                                >
-                                  {completed ? '✓' : idx + 1}
-                                </div>
-                                {lesson.image_url && (
-                                  <img 
-                                    src={`${API_BASE}${lesson.image_url}`} 
-                                    alt={lesson.title} 
-                                    className="w-16 h-16 object-cover rounded-md border-2 border-[#1A1A1A] hand-drawn-border shrink-0"
-                                  />
-                                )}
-                                <div>
-                                  <h3 className="font-heading text-xl font-bold mb-1">
-                                    {lesson.title}
-                                  </h3>
-                                  <p className="text-gray-600">{lesson.objective}</p>
-                                </div>
-                              </div>
-
-                              <HandDrawnButton
-                                variant={completed ? 'outline' : 'primary'}
-                                className="sm:w-auto w-full shrink-0"
-                                onClick={() =>
-                                  navigate(
-                                    `/learn/session/${selectedCourse.id}/${lesson.id}`,
-                                  )
-                                }
-                              >
-                                {completed ? 'Review' : 'Start'}
-                                {!completed && <ChevronRight size={18} />}
-                              </HandDrawnButton>
-                            </HandDrawnCard>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-gray-500">No courses available for this language yet.</p>
-                )}
+          <div>
+            {courses.length > 1 && (
+              <div className="mb-8 flex flex-wrap gap-3">
+                {courses.map((course) => (
+                  <HandDrawnButton
+                    key={course.id}
+                    variant={course.id === selectedCourseId ? 'primary' : 'outline'}
+                    onClick={() => setSelectedCourseId(course.id)}
+                  >
+                    {course.title}
+                  </HandDrawnButton>
+                ))}
               </div>
             )}
 
-            {/* ---- TOPICS TAB ---- */}
-            {mode === 'topics' && (
-              <div>
-                <div className="text-center mb-10 relative">
-                  <SpeechBubble className="absolute -top-4 right-0 w-20 h-20 text-[#DC2626] opacity-15 rotate-12 hidden md:block" />
-                  <h2 className="font-heading text-3xl font-bold text-[#1A1A1A] mb-2">
-                    Pick a Topic
-                  </h2>
-                  <p className="text-gray-600 max-w-xl mx-auto">
-                    Choose a conversation topic to practice {selectedLang.name} with your AI coach.
-                  </p>
+            {selectedCourse ? (
+              <>
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="font-heading text-3xl font-bold text-[#1A1A1A]">
+                      {selectedCourse.title}
+                    </h2>
+                    {selectedCourse.description && (
+                      <p className="text-gray-600 mt-1">{selectedCourse.description}</p>
+                    )}
+                  </div>
+                  {courses.length > 1 && (
+                    <div className="flex gap-2">
+                      {courses.map((c) => (
+                        <span
+                          key={c.id}
+                          className={`w-3 h-3 rounded-full ${
+                            c.id === selectedCourseId ? 'bg-[#1A1A1A]' : 'bg-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {topics.length === 0 ? (
-                  <p className="text-gray-500 text-center">No topics available for {selectedLang.name} yet.</p>
+                {lessons.length === 0 ? (
+                  <p className="text-gray-500">No lessons in this course yet.</p>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {topics.map((topic, idx) => (
-                      <HandDrawnCard
-                        key={topic.id}
-                        rotate={idx % 2 === 0 ? 'left' : 'right'}
-                        className="flex flex-col h-full"
-                      >
-                        {topic.image_url && (
-                          <div className="w-full h-32 mb-4 border-2 border-[#1A1A1A] hand-drawn-border overflow-hidden rounded-md shrink-0">
-                            <img
-                              src={`${API_BASE}${topic.image_url}`}
-                              alt={topic.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <h3 className="font-heading text-xl font-bold mb-2">
-                          {topic.title}
-                        </h3>
-                        <p className="text-gray-600 text-sm mb-6 flex-1">
-                          {topic.description}
-                        </p>
-                        <HandDrawnButton
-                          variant="outline"
-                          className="w-full mt-auto"
-                          onClick={() => navigate(`/topics/${topic.id}`)}
+                  <div className="space-y-4">
+                    {lessons.map((lesson, idx) => {
+                      const completed = isLessonCompleted(idx, selectedCourse.id);
+                      return (
+                        <HandDrawnCard
+                          key={lesson.id}
+                          rotate={
+                            idx % 3 === 0 ? 'left' : idx % 2 === 0 ? 'right' : 'none'
+                          }
+                          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                            completed ? 'opacity-75 bg-gray-50' : ''
+                          }`}
                         >
-                          Start <ChevronRight size={18} />
-                        </HandDrawnButton>
-                      </HandDrawnCard>
-                    ))}
+                          <div className="flex items-start gap-4">
+                            <div
+                              className={`w-10 h-10 rounded-full border-2 border-[#1A1A1A] flex items-center justify-center font-bold shrink-0 ${
+                                completed
+                                  ? 'bg-[#1A1A1A] text-white'
+                                  : 'bg-white'
+                              }`}
+                            >
+                              {completed ? '✓' : idx + 1}
+                            </div>
+                            {lesson.image_url && (
+                              <img
+                                src={`${API_BASE}${lesson.image_url}`}
+                                alt={lesson.title}
+                                className="w-16 h-16 object-cover rounded-md border-2 border-[#1A1A1A] hand-drawn-border shrink-0"
+                              />
+                            )}
+                            <div>
+                              <h3 className="font-heading text-xl font-bold mb-1">
+                                {lesson.title}
+                              </h3>
+                              <p className="text-gray-600">{lesson.objective}</p>
+                            </div>
+                          </div>
+
+                          <HandDrawnButton
+                            variant={completed ? 'outline' : 'primary'}
+                            className="sm:w-auto w-full shrink-0"
+                            onClick={() =>
+                              navigate(
+                                `/learn/session/${selectedCourse.id}/${lesson.id}`,
+                              )
+                            }
+                          >
+                            {completed ? 'Review' : 'Start'}
+                            {!completed && <ChevronRight size={18} />}
+                          </HandDrawnButton>
+                        </HandDrawnCard>
+                      );
+                    })}
                   </div>
                 )}
-              </div>
+              </>
+            ) : (
+              <p className="text-gray-500">No courses available for this language yet.</p>
             )}
-
-            {/* ---- FREESTYLE TAB ---- */}
-            {mode === 'freestyle' && (
-              <div className="max-w-2xl mx-auto">
-                <HandDrawnCard rotate="none" className="text-center">
-                  <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#DC2626]/10 border-2 border-[#1A1A1A] flex items-center justify-center hand-drawn-border">
-                    <MicrophoneDoodle className="w-10 h-10 text-[#DC2626]" />
-                  </div>
-                  <h2 className="font-heading text-3xl font-bold text-[#1A1A1A] mb-3">
-                    Free Conversation
-                  </h2>
-                  <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                    Have an open-ended conversation in {selectedLang.name} about
-                    anything you like. Your AI coach will guide you and help correct
-                    mistakes along the way.
-                  </p>
-                  <HandDrawnButton
-                    variant="primary"
-                    className="text-lg px-8 py-3"
-                    onClick={() => navigate('/freestyle')}
-                  >
-                    Start Talking <Mic size={20} />
-                  </HandDrawnButton>
-                </HandDrawnCard>
-              </div>
-            )}
-          </>
+          </div>
         )}
       </main>
     </div>

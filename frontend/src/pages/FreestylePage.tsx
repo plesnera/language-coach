@@ -1,148 +1,177 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { AppNavbar } from '../components/AppNavbar';
 import { HandDrawnCard } from '../components/HandDrawnCard';
 import { HandDrawnButton } from '../components/HandDrawnButton';
 import {
+  SquigglyLine,
   MicrophoneDoodle,
-  ChatBubbleDoodle } from
-'../components/DoodleDecorations';
-import { Send } from 'lucide-react';
+  GlobeDoodle,
+} from '../components/DoodleDecorations';
+import { Mic, Loader2 } from 'lucide-react';
+
+const API_BASE = import.meta.env.DEV
+  ? `http://${window.location.hostname}:8000`
+  : '';
+
+interface Language {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
+
+const FLAG_MAP: Record<string, string> = {
+  spanish: '🇪🇸',
+  french: '🇫🇷',
+  japanese: '🇯🇵',
+  german: '🇩🇪',
+  italian: '🇮🇹',
+  portuguese: '🇵🇹',
+  chinese: '🇨🇳',
+  korean: '🇰🇷',
+  arabic: '🇸🇦',
+  hindi: '🇮🇳',
+  russian: '🇷🇺',
+  english: '🇬🇧',
+};
+
+const getFlag = (name: string) => FLAG_MAP[name.toLowerCase()] ?? '🌍';
 
 export function FreestylePage() {
-  const [message, setMessage] = useState('');
-  const starters = [
-  'Tell me about your day',
-  'What are your hobbies?',
-  'Describe your hometown',
-  'What did you eat today?',
-  'Talk about your favorite movie'];
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const messages = [
-  {
-    id: 1,
-    sender: 'coach',
-    text: "¡Hola! I'm your language coach. What would you like to talk about today?",
-    time: '10:00 AM'
-  },
-  {
-    id: 2,
-    sender: 'user',
-    text: 'Hola. Me gustaría hablar sobre mi película favorita.',
-    time: '10:01 AM'
-  },
-  {
-    id: 3,
-    sender: 'coach',
-    text: '¡Excelente! ¿Cuál es tu película favorita y por qué te gusta tanto?',
-    time: '10:01 AM'
-  }];
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [selectedLangId, setSelectedLangId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const headers = { Authorization: `Bearer ${user?.token}` };
+
+  const loadLanguages = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(`${API_BASE}/api/languages/`, { headers });
+      if (!res.ok) throw new Error('Failed to load languages');
+      const langs: Language[] = await res.json();
+      setLanguages(langs);
+      if (langs.length > 0 && !selectedLangId) {
+        setSelectedLangId(langs[0].id);
+      }
+    } catch (err: any) {
+      setError(err.message ?? 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    loadLanguages();
+  }, [loadLanguages]);
+
+  const selectedLang = languages.find((l) => l.id === selectedLangId);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#FAFAF8]">
+        <AppNavbar />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#FAFAF8]">
+        <AppNavbar />
+        <div className="flex-1 flex items-center justify-center">
+          <HandDrawnCard className="max-w-md text-center">
+            <p className="text-[#DC2626] font-bold mb-4">{error}</p>
+            <HandDrawnButton variant="primary" onClick={loadLanguages}>
+              Retry
+            </HandDrawnButton>
+          </HandDrawnCard>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col h-screen">
+    <div className="min-h-screen flex flex-col bg-[#FAFAF8]">
       <AppNavbar />
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col min-h-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#DC2626]/10 text-[#DC2626] flex items-center justify-center hand-drawn-border border-2 border-[#1A1A1A]">
-              <MicrophoneDoodle className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="font-heading text-3xl font-bold text-[#1A1A1A]">
-                Freestyle
-              </h1>
-              <p className="text-gray-600 text-sm">
-                Just talk about whatever's on your mind!
-              </p>
-            </div>
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12 relative">
+        <GlobeDoodle className="absolute bottom-40 left-10 w-32 h-32 text-[#DC2626] opacity-20 -rotate-12 hidden lg:block" />
+
+        {/* Language selector */}
+        <div className="mb-10">
+          <div className="inline-block relative mb-8">
+            <h1 className="font-heading text-4xl md:text-5xl font-bold text-[#1A1A1A]">
+              Freestyle
+            </h1>
+            <SquigglyLine className="absolute -bottom-3 left-0 w-full h-3 text-[#DC2626]" />
           </div>
 
-          <select className="bg-white border-2 border-[#1A1A1A] hand-drawn-border-alt px-4 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/50 cursor-pointer">
-            <option>🇪🇸 Spanish</option>
-            <option>🇫🇷 French</option>
-            <option>🇯🇵 Japanese</option>
-          </select>
+          {languages.length === 0 ? (
+            <p className="text-gray-500">No languages available yet.</p>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {languages.map((lang) => {
+                const isSelected = selectedLangId === lang.id;
+                return (
+                  <button
+                    key={lang.id}
+                    onClick={() => setSelectedLangId(lang.id)}
+                    className={`
+                      flex items-center gap-2 px-5 py-2.5 border-2 border-[#1A1A1A]
+                      hand-drawn-border-alt font-medium transition-colors
+                      ${isSelected
+                        ? 'bg-[#1A1A1A] text-white'
+                        : 'bg-white text-[#1A1A1A] hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    <span className="text-xl">{getFlag(lang.name)}</span>
+                    {lang.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Chat Area */}
-        <HandDrawnCard className="flex-1 flex flex-col min-h-0 p-0 overflow-hidden bg-white/50">
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {messages.map((msg) =>
-            <div
-              key={msg.id}
-              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-
-                <div
-                className={`max-w-[80%] flex gap-3 ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-
-                  {msg.sender === 'coach' &&
-                <div className="w-8 h-8 rounded-full border-2 border-[#1A1A1A] bg-[#F59E0B] flex items-center justify-center shrink-0 mt-1">
-                      <ChatBubbleDoodle className="w-4 h-4 text-white" />
-                    </div>
-                }
-
-                  <div>
-                    <div
-                    className={`
-                      p-4 border-2 border-[#1A1A1A] text-[15px] leading-relaxed
-                      ${msg.sender === 'user' ? 'bg-[#1A1A1A] text-white rounded-[20px_20px_0px_20px]' : 'bg-white text-[#1A1A1A] rounded-[20px_20px_20px_0px] hand-drawn-shadow-sm'}
-                    `}>
-
-                      {msg.text}
-                    </div>
-                    <div
-                    className={`text-xs text-gray-500 mt-1 ${msg.sender === 'user' ? 'text-right' : 'text-left'}`}>
-
-                      {msg.time}
-                    </div>
-                  </div>
-                </div>
+        {/* Freestyle card */}
+        {selectedLang && (
+          <div className="max-w-2xl mx-auto">
+            <HandDrawnCard rotate="none" className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#DC2626]/10 border-2 border-[#1A1A1A] flex items-center justify-center hand-drawn-border">
+                <MicrophoneDoodle className="w-10 h-10 text-[#DC2626]" />
               </div>
-            )}
-          </div>
-
-          {/* Input Area */}
-          <div className="p-4 border-t-2 border-[#1A1A1A] bg-white">
-            <div className="mb-4 overflow-x-auto pb-2 flex gap-2 hide-scrollbar">
-              {starters.map((starter, idx) =>
-              <button
-                key={idx}
-                onClick={() => setMessage(starter)}
-                className="whitespace-nowrap px-4 py-1.5 text-sm border-2 border-[#1A1A1A] hand-drawn-border-pill hover:bg-gray-50 transition-colors">
-
-                  {starter}
-                </button>
-              )}
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (message) setMessage('');
-              }}
-              className="flex gap-3">
-
-              <input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type your message..."
-                className="flex-1 bg-transparent border-2 border-[#1A1A1A] hand-drawn-border-alt px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/50" />
-
+              <h2 className="font-heading text-3xl font-bold text-[#1A1A1A] mb-3">
+                Free Conversation
+              </h2>
+              <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                Have an open-ended conversation in {selectedLang.name} about
+                anything you like. Your AI coach will guide you and help correct
+                mistakes along the way.
+              </p>
               <HandDrawnButton
-                type="submit"
-                className="px-4 shrink-0"
-                disabled={!message.trim()}>
-
-                <Send size={20} />
+                variant="primary"
+                className="text-lg px-8 py-3"
+                onClick={() => navigate(`/freestyle/session?lang=${selectedLangId}`)}
+              >
+                Start Talking <Mic size={20} />
               </HandDrawnButton>
-            </form>
+            </HandDrawnCard>
           </div>
-        </HandDrawnCard>
+        )}
       </main>
-    </div>);
-
+    </div>
+  );
 }
 
 export default FreestylePage;

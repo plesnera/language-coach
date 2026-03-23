@@ -21,6 +21,7 @@ locals {
     "bigquery.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "cloudtrace.googleapis.com",
+    "secretmanager.googleapis.com",
     "telemetry.googleapis.com",
   ]
 
@@ -29,6 +30,9 @@ locals {
     "run.googleapis.com",
     "discoveryengine.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "firestore.googleapis.com",
+    "firebase.googleapis.com",
+    "identitytoolkit.googleapis.com",
     "iam.googleapis.com",
     "bigquery.googleapis.com",
     "serviceusage.googleapis.com",

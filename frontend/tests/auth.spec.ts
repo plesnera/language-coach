@@ -6,7 +6,7 @@ test.describe('Authentication', () => {
     // We can verify this by going directly to a protected route
     // and checking for an element that only appears when logged in.
     await page.goto('/learn');
-    await page.waitForSelector('button:has-text("Log Out")');
+    await page.waitForSelector('button:has-svg("lucide lucide-log-out")');
     await expect(page.locator('button', { hasText: 'Log Out' })).toBeVisible();
   });
 });

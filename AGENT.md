@@ -19,6 +19,7 @@ A real-time voice-based language learning app. Users practice speaking a target 
 ```
 language-coach/
 ├── app/                          # Python backend
+│   ├── agent.py                  # Top-level ADK agent entry point
 │   ├── agents/                   # ADK agent definitions
 │   │   ├── router_agent.py       # Root agent — routes to sub-agents by mode
 │   │   ├── beginner_agent.py     # Structured lesson agent
@@ -59,20 +60,29 @@ language-coach/
 ├── frontend/                     # React SPA
 │   ├── src/
 │   │   ├── App.tsx               # Route definitions, auth guards
+│   │   ├── firebase.ts           # Firebase SDK initialisation
+│   │   ├── multimodal-live-types.ts  # Shared types for live audio session
 │   │   ├── contexts/
 │   │   │   ├── AuthContext.tsx    # Auth provider (Firebase or local-dev auto-login)
 │   │   │   └── LiveAPIContext.tsx # WebSocket/ADK live session provider
+│   │   ├── hooks/                # Custom React hooks (use-live-api, use-webcam, etc.)
+│   │   ├── shared/               # Audio utilities, multimodal-live-client, worklets
+│   │   ├── styles/               # SCSS stylesheets per page/component
+│   │   ├── utils/                # General utility helpers
 │   │   ├── pages/
-│   │   │   ├── LandingPage.tsx   # Public landing (/)
-│   │   │   ├── LoginPage.tsx     # /login
-│   │   │   ├── SignupPage.tsx    # /signup
-│   │   │   ├── LearnPage.tsx     # /learn — main app hub (3 mode tabs)
-│   │   │   ├── LessonSessionPage.tsx  # /learn/session/:courseId/:lessonId
-│   │   │   ├── TopicPage.tsx     # /topics
-│   │   │   ├── TopicSessionPage.tsx
-│   │   │   ├── FreestylePage.tsx # /freestyle
-│   │   │   ├── HistoryPage.tsx   # /history
-│   │   │   └── admin/            # /admin/* — admin-only pages
+│   │   │   ├── LandingPage.tsx       # Public landing (/)
+│   │   │   ├── LoginPage.tsx         # /login
+│   │   │   ├── SignupPage.tsx        # /signup
+│   │   │   ├── ForgotPasswordPage.tsx # /forgot-password
+│   │   │   ├── LearnPage.tsx         # /learn — main app hub (3 mode tabs)
+│   │   │   ├── LessonSessionPage.tsx # /learn/session/:courseId/:lessonId
+│   │   │   ├── TopicPage.tsx         # /topics
+│   │   │   ├── TopicSessionPage.tsx  # /topics/:id
+│   │   │   ├── FreestylePage.tsx     # /freestyle
+│   │   │   ├── FreestyleSessionPage.tsx # /freestyle/session
+│   │   │   ├── HistoryPage.tsx       # /history
+│   │   │   ├── DebugPage.tsx         # /debug (dev mode only)
+│   │   │   └── admin/                # /admin/* — admin-only pages
 │   │   │       ├── AdminCoursesPage.tsx
 │   │   │       ├── AdminLessonsPage.tsx
 │   │   │       ├── AdminTopicsPage.tsx
@@ -85,18 +95,23 @@ language-coach/
 │   │       ├── DoodleDecorations.tsx
 │   │       ├── AppNavbar.tsx
 │   │       ├── AdminLayout.tsx
-│   │       └── session/          # SessionPage + AudioController
+│   │       ├── session/          # Session UI shell
+│   │       ├── audio-controller/ # Mic/speaker controls
+│   │       ├── audio-pulse/      # Audio visualisation
+│   │       ├── logger/           # Dev log panel
+│   │       ├── side-panel/       # Collapsible side panel
+│   │       └── transcription-preview/ # Live transcript display
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── tsconfig.json
 ├── tests/
 │   ├── unit/
-│   └── integration/
+│   ├── integration/
+│   └── load_test/
 ├── data/                         # All local data (audio files, uploaded images, user docs)
 ├── deployment/                   # Terraform + Cloud Build
 ├── Makefile                      # All dev/build/deploy commands
 ├── pyproject.toml                # Python deps + tool config
-├── FEATURE_ROADMAP.md            # Full product spec & implementation plan
 └── AGENT.md                      # ← This file
 ```
 

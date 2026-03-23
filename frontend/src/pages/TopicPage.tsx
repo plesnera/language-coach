@@ -1,159 +1,237 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { AppNavbar } from '../components/AppNavbar';
 import { HandDrawnCard } from '../components/HandDrawnCard';
 import { HandDrawnButton } from '../components/HandDrawnButton';
-import { HandDrawnInput } from '../components/HandDrawnInput';
-import { SpeechBubble, PencilDoodle } from '../components/DoodleDecorations';
-import { Upload } from 'lucide-react';
+import {
+  SquigglyLine,
+  SpeechBubble,
+  GlobeDoodle,
+} from '../components/DoodleDecorations';
+import { ChevronRight, Loader2 } from 'lucide-react';
+
+const API_BASE = import.meta.env.DEV
+  ? `http://${window.location.hostname}:8000`
+  : '';
+
+interface Language {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
+
+interface Topic {
+  id: string;
+  language_id: string;
+  title: string;
+  description: string;
+  conversation_prompt: string;
+  sort_order: number;
+  image_url?: string;
+}
+
+const FLAG_MAP: Record<string, string> = {
+  spanish: '🇪🇸',
+  french: '🇫🇷',
+  japanese: '🇯🇵',
+  german: '🇩🇪',
+  italian: '🇮🇹',
+  portuguese: '🇵🇹',
+  chinese: '🇨🇳',
+  korean: '🇰🇷',
+  arabic: '🇸🇦',
+  hindi: '🇮🇳',
+  russian: '🇷🇺',
+  english: '🇬🇧',
+};
+
+const getFlag = (name: string) => FLAG_MAP[name.toLowerCase()] ?? '🌍';
 
 export function TopicPage() {
-  const [customText, setCustomText] = useState('');
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const topics = [
-  {
-    id: 'travel',
-    icon: '✈️',
-    name: 'Travel',
-    desc: 'Airports, hotels, and sightseeing.'
-  },
-  {
-    id: 'food',
-    icon: '🍳',
-    name: 'Food & Cooking',
-    desc: 'Ordering at restaurants and recipes.'
-  },
-  {
-    id: 'sports',
-    icon: '⚽️',
-    name: 'Sports',
-    desc: 'Games, teams, and staying active.'
-  },
-  {
-    id: 'music',
-    icon: '🎵',
-    name: 'Music',
-    desc: 'Genres, instruments, and concerts.'
-  },
-  {
-    id: 'movies',
-    icon: '🎬',
-    name: 'Movies',
-    desc: 'Plot summaries and actor discussions.'
-  },
-  {
-    id: 'tech',
-    icon: '💻',
-    name: 'Technology',
-    desc: 'Gadgets, software, and the internet.'
-  },
-  {
-    id: 'nature',
-    icon: '🌲',
-    name: 'Nature',
-    desc: 'Weather, animals, and the outdoors.'
-  },
-  {
-    id: 'culture',
-    icon: '🏛️',
-    name: 'Culture',
-    desc: 'Traditions, holidays, and history.'
-  }];
+
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [selectedLangId, setSelectedLangId] = useState<string | null>(null);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const headers = { Authorization: `Bearer ${user?.token}` };
+
+  const loadLanguages = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(`${API_BASE}/api/languages/`, { headers });
+      if (!res.ok) throw new Error('Failed to load languages');
+      const langs: Language[] = await res.json();
+      setLanguages(langs);
+      if (langs.length > 0 && !selectedLangId) {
+        setSelectedLangId(langs[0].id);
+      }
+    } catch (err: any) {
+      setError(err.message ?? 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    loadLanguages();
+  }, [loadLanguages]);
+
+  useEffect(() => {
+    if (!selectedLangId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/topics/?language_id=${selectedLangId}`,
+          { headers },
+        );
+        if (!cancelled) {
+          if (res.ok) {
+            setTopics(await res.json());
+          } else {
+            setTopics([]);
+          }
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err.message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedLangId, user?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectedLang = languages.find((l) => l.id === selectedLangId);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#FAFAF8]">
+        <AppNavbar />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#FAFAF8]">
+        <AppNavbar />
+        <div className="flex-1 flex items-center justify-center">
+          <HandDrawnCard className="max-w-md text-center">
+            <p className="text-[#DC2626] font-bold mb-4">{error}</p>
+            <HandDrawnButton variant="primary" onClick={loadLanguages}>
+              Retry
+            </HandDrawnButton>
+          </HandDrawnCard>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#FAFAF8]">
       <AppNavbar />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12 relative">
-        <SpeechBubble className="absolute top-10 right-20 w-32 h-32 text-[#DC2626] opacity-10 rotate-12 hidden lg:block" />
-        <PencilDoodle className="absolute bottom-40 left-10 w-24 h-24 text-[#F59E0B] opacity-20 -rotate-45 hidden lg:block" />
+        <SpeechBubble className="absolute top-20 right-10 w-24 h-24 text-[#DC2626] opacity-20 rotate-12 hidden lg:block" />
+        <GlobeDoodle className="absolute bottom-40 left-10 w-32 h-32 text-[#F59E0B] opacity-20 -rotate-12 hidden lg:block" />
 
-        <div className="text-center mb-12">
-          <div className="inline-block relative">
-            <h1 className="font-heading text-4xl md:text-5xl font-bold text-[#1A1A1A] mb-4">
-              Pick a Topic
+        {/* Language selector */}
+        <div className="mb-10">
+          <div className="inline-block relative mb-8">
+            <h1 className="font-heading text-4xl md:text-5xl font-bold text-[#1A1A1A]">
+              Topics
             </h1>
-            <svg
-              className="absolute -top-6 -right-8 w-12 h-12 text-[#F59E0B]"
-              viewBox="0 0 100 100"
-              fill="none">
-
-              <path
-                d="M50 10 L 60 40 L 90 45 L 65 65 L 75 95 L 50 75 L 25 95 L 35 65 L 10 45 L 40 40 Z"
-                stroke="currentColor"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round" />
-
-            </svg>
+            <SquigglyLine className="absolute -bottom-3 left-0 w-full h-3 text-[#DC2626]" />
           </div>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Choose a conversation topic or bring your own material to discuss!
-          </p>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {topics.map((topic, idx) =>
-          <HandDrawnCard
-            key={topic.name}
-            rotate={idx % 2 === 0 ? 'left' : 'right'}
-            className="flex flex-col h-full">
-
-              <div className="text-4xl mb-4">{topic.icon}</div>
-              <h3 className="font-heading text-xl font-bold mb-2">
-                {topic.name}
-              </h3>
-              <p className="text-gray-600 text-sm mb-6 flex-1">{topic.desc}</p>
-              <HandDrawnButton
-                variant="outline"
-                className="w-full mt-auto"
-                onClick={() => navigate(`/topics/${topic.id}`)}>
-                Start
-              </HandDrawnButton>
-            </HandDrawnCard>
+          {languages.length === 0 ? (
+            <p className="text-gray-500">No languages available yet.</p>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {languages.map((lang) => {
+                const isSelected = selectedLangId === lang.id;
+                return (
+                  <button
+                    key={lang.id}
+                    onClick={() => setSelectedLangId(lang.id)}
+                    className={`
+                      flex items-center gap-2 px-5 py-2.5 border-2 border-[#1A1A1A]
+                      hand-drawn-border-alt font-medium transition-colors
+                      ${isSelected
+                        ? 'bg-[#1A1A1A] text-white'
+                        : 'bg-white text-[#1A1A1A] hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    <span className="text-xl">{getFlag(lang.name)}</span>
+                    {lang.name}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
 
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-4 mb-6">
-            <h2 className="font-heading text-3xl font-bold text-[#1A1A1A]">
-              Upload Your Own
-            </h2>
-            <div className="h-0.5 flex-1 bg-[#1A1A1A] opacity-20 rounded-full"></div>
-          </div>
-
-          <HandDrawnCard dashed rotate="none" className="bg-[#FAFAF8]">
-            <div className="flex flex-col items-center text-center mb-6">
-              <div className="w-16 h-16 rounded-full border-2 border-[#1A1A1A] bg-white flex items-center justify-center mb-4 hand-drawn-border">
-                <Upload size={28} />
-              </div>
-              <h3 className="font-heading text-xl font-bold mb-2">
-                Paste or upload text
-              </h3>
-              <p className="text-gray-600 text-sm">
-                Got an article, email, or story you want to practice with? Paste
-                it here.
+        {/* Topics grid */}
+        {selectedLang && (
+          <div>
+            <div className="text-center mb-10 relative">
+              <h2 className="font-heading text-3xl font-bold text-[#1A1A1A] mb-2">
+                Pick a Topic
+              </h2>
+              <p className="text-gray-600 max-w-xl mx-auto">
+                Choose a conversation topic to practice {selectedLang.name} with your AI coach.
               </p>
             </div>
 
-            <HandDrawnInput
-              multiline
-              rows={6}
-              placeholder="Paste your text here..."
-              value={customText}
-              onChange={(e) => setCustomText(e.target.value)}
-              className="mb-6 bg-white" />
-
-            <div className="flex justify-end">
-              <HandDrawnButton disabled={!customText.trim()}>
-                Start Conversation
-              </HandDrawnButton>
-            </div>
-          </HandDrawnCard>
-        </div>
+            {topics.length === 0 ? (
+              <p className="text-gray-500 text-center">No topics available for {selectedLang.name} yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {topics.map((topic, idx) => (
+                  <HandDrawnCard
+                    key={topic.id}
+                    rotate={idx % 2 === 0 ? 'left' : 'right'}
+                    className="flex flex-col h-full"
+                  >
+                    {topic.image_url && (
+                      <div className="w-full h-32 mb-4 border-2 border-[#1A1A1A] hand-drawn-border overflow-hidden rounded-md shrink-0">
+                        <img
+                          src={`${API_BASE}${topic.image_url}`}
+                          alt={topic.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <h3 className="font-heading text-xl font-bold mb-2">
+                      {topic.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-6 flex-1">
+                      {topic.description}
+                    </p>
+                    <HandDrawnButton
+                      variant="outline"
+                      className="w-full mt-auto"
+                      onClick={() => navigate(`/topics/${topic.id}`)}
+                    >
+                      Start <ChevronRight size={18} />
+                    </HandDrawnButton>
+                  </HandDrawnCard>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
-    </div>);
-
+    </div>
+  );
 }
 
 export default TopicPage;

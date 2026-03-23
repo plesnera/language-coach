@@ -56,6 +56,7 @@ variable "app_sa_roles" {
   default = [
 
     "roles/aiplatform.user",
+    "roles/datastore.user",
     "roles/discoveryengine.editor",
     "roles/logging.logWriter",
     "roles/cloudtrace.agent",

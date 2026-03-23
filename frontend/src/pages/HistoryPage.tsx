@@ -74,7 +74,7 @@ const HistoryPage: React.FC = () => {
   return (
     <div className="history-page">
       <header className="history-header">
-        <button className="back-button" onClick={() => navigate("/")}>
+        <button className="back-button" onClick={() => navigate("/learn")}>
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <h1>Conversation History</h1>

@@ -17,7 +17,8 @@ import json
 import logging
 import os
 import uuid
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 
@@ -32,7 +33,23 @@ from google.cloud import logging as google_cloud_logging
 from pydantic import BaseModel, Field
 from websockets.exceptions import ConnectionClosedError
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Ensure seed data exists so the app is usable out of the box."""
+    from app.db import courses as courses_repo
+    from app.db import languages as lang_repo
+    from app.db import topics as topics_repo
+
+    try:
+        lang_repo.seed_defaults()
+        courses_repo.seed_defaults()
+        topics_repo.seed_defaults()
+    except Exception:
+        logging.exception("Failed to seed default data (non-fatal)")
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -59,21 +76,6 @@ app.include_router(conversations_router)
 app.include_router(progress_router)
 app.include_router(admin_router)
 
-
-@app.on_event("startup")
-def _seed_default_data() -> None:
-    """Ensure seed data exists so the app is usable out of the box."""
-    from app.db import courses as courses_repo
-    from app.db import languages as lang_repo
-    from app.db import topics as topics_repo
-    from app.db import images as images_repo
-
-    try:
-        lang_repo.seed_defaults()
-        courses_repo.seed_defaults()
-        topics_repo.seed_defaults()
-    except Exception:
-        logging.exception("Failed to seed default data (non-fatal)")
 
 # Get the path to the frontend build directory
 current_dir = Path(__file__).parent

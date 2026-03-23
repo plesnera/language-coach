@@ -25,6 +25,7 @@ import { TopicPage } from "./pages/TopicPage";
 import TopicSessionPage from "./pages/TopicSessionPage";
 import LessonSessionPage from "./pages/LessonSessionPage";
 import { FreestylePage } from "./pages/FreestylePage";
+import FreestyleSessionPage from "./pages/FreestyleSessionPage";
 import HistoryPage from "./pages/HistoryPage";
 import { AdminLayout } from "./components/AdminLayout";
 import { AdminCoursesPage } from "./pages/admin/AdminCoursesPage";
@@ -114,6 +115,9 @@ function AppRoutes() {
       } />
       <Route path="/freestyle" element={
         <RequireAuth><FreestylePage /></RequireAuth>
+      } />
+      <Route path="/freestyle/session" element={
+        <AuthenticatedSession><FreestyleSessionPage /></AuthenticatedSession>
       } />
       <Route path="/history" element={
         <RequireAuth><HistoryPage /></RequireAuth>
