@@ -31,105 +31,31 @@ const API_BASE = import.meta.env.DEV
   : "";
 
 /**
- * When VITE_LOCAL_DEV is set (or no Firebase API key is configured) the
- * frontend runs in local-dev mode: Firebase is not initialised and the
- * backend is called directly with simple local tokens.
+ * Whether the app is in local-dev mode (running against emulators).
+ * Used to trigger auto-login with the seeded local-test-user.
  */
 const IS_LOCAL_DEV: boolean =
   import.meta.env.VITE_LOCAL_DEV === "true" ||
   !import.meta.env.VITE_FIREBASE_API_KEY;
 
 // ---------------------------------------------------------------------------
-// Local-dev auth provider — no Firebase dependency
+// Single Firebase auth provider — works with both production & emulator
 // ---------------------------------------------------------------------------
 
-const LocalAuthProvider: React.FC<{ children: React.ReactNode }> = ({
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail,
+  updateProfile,
+} from "firebase/auth";
+import { auth } from "../firebase";
+
+type User = import("firebase/auth").User;
+
+const InternalAuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Auto-login as the default dev user on mount.
-  useEffect(() => {
-    setUser({
-      uid: "local-dev-user",
-      email: "dev@localhost",
-      displayName: "Dev User",
-      role: "admin",
-      token: "dev-bypass",
-    });
-    setLoading(false);
-  }, []);
-
-  const login = useCallback(async (_email: string, _password: string) => {
-    // In local mode any login just gives you the dev user.
-    setUser({
-      uid: "local-dev-user",
-      email: _email,
-      displayName: "Dev User",
-      role: "admin",
-      token: "dev-bypass",
-    });
-  }, []);
-
-  const register = useCallback(
-    async (email: string, password: string, displayName: string) => {
-      const res = await fetch(`${API_BASE}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, display_name: displayName }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail ?? "Registration failed");
-      }
-      const data = await res.json();
-      setUser({
-        uid: data.uid,
-        email: data.email,
-        displayName: data.display_name,
-        role: data.role,
-        token: data.token ?? data.uid,
-      });
-    },
-    [],
-  );
-
-  const logout = useCallback(async () => {
-    setUser(null);
-  }, []);
-
-  const resetPassword = useCallback(async (_email: string) => {
-    // no-op locally
-  }, []);
-
-  const value = useMemo(
-    () => ({ user, loading, login, register, logout, resetPassword }),
-    [user, loading, login, register, logout, resetPassword],
-  );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-// ---------------------------------------------------------------------------
-// Firebase auth provider — production path
-// ---------------------------------------------------------------------------
-
-const FirebaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  // Dynamic imports so the firebase bundle is never loaded in local-dev mode.
-  const {
-    onAuthStateChanged,
-    signInWithEmailAndPassword,
-    signOut,
-    sendPasswordResetEmail,
-    updateProfile,
-  } = require("firebase/auth");
-  const { auth } = require("../firebase");
-
-  type User = import("firebase/auth").User;
-
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -149,19 +75,34 @@ const FirebaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (fbUser) {
         setUser(await toAppUser(fbUser));
       } else {
-        setUser(null);
+        // In local-dev mode, auto-login with the seeded emulator user.
+        if (IS_LOCAL_DEV) {
+          try {
+            const cred = await signInWithEmailAndPassword(
+              auth,
+              "local-test-user@localhost",
+              "devpassword",
+            );
+            setUser(await toAppUser(cred.user));
+          } catch (err) {
+            console.error("Auto-login failed", err);
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
       }
       setLoading(false);
     });
     return unsubscribe;
-  }, [toAppUser, onAuthStateChanged, auth]);
+  }, [toAppUser]);
 
   const login = useCallback(
     async (email: string, password: string) => {
       const cred = await signInWithEmailAndPassword(auth, email, password);
       setUser(await toAppUser(cred.user));
     },
-    [toAppUser, signInWithEmailAndPassword, auth],
+    [toAppUser],
   );
 
   const register = useCallback(
@@ -179,20 +120,17 @@ const FirebaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await updateProfile(cred.user, { displayName });
       setUser(await toAppUser(cred.user));
     },
-    [toAppUser, signInWithEmailAndPassword, updateProfile, auth],
+    [toAppUser],
   );
 
   const logout = useCallback(async () => {
     await signOut(auth);
     setUser(null);
-  }, [signOut, auth]);
+  }, []);
 
-  const resetPassword = useCallback(
-    async (email: string) => {
-      await sendPasswordResetEmail(auth, email);
-    },
-    [sendPasswordResetEmail, auth],
-  );
+  const resetPassword = useCallback(async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  }, []);
 
   const value = useMemo(
     () => ({ user, loading, login, register, logout, resetPassword }),
@@ -203,12 +141,10 @@ const FirebaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 // ---------------------------------------------------------------------------
-// Export the right provider based on the environment
+// Export
 // ---------------------------------------------------------------------------
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = IS_LOCAL_DEV
-  ? LocalAuthProvider
-  : FirebaseAuthProvider;
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = InternalAuthProvider;
 
 export const useAuth = (): AuthContextType => {
   const ctx = useContext(AuthContext);

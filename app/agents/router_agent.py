@@ -25,7 +25,14 @@ from google.genai import types
 import app.agents.setup
 from app.agents.beginner_agent import create_beginner_agent
 from app.agents.freestyle_agent import create_freestyle_agent
+from app.agents.prompt_loader import load_prompt
 from app.agents.topic_agent import create_topic_agent
+
+# Minimal fallback — only used when Firestore is completely unreachable.
+_ROUTER_FALLBACK = (
+    "You are the Language Coach routing agent. Greet the user and ask what "
+    "they would like to do: beginner lessons, topic conversation, or free-talk."
+)
 
 # Create sub-agents (default language = Spanish).
 _beginner = create_beginner_agent("es")
@@ -38,19 +45,7 @@ root_agent = Agent(
         model="gemini-live-2.5-flash-native-audio",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
-    instruction=(
-        "You are the Language Coach routing agent. "
-        "When a session starts, greet the user with: "
-        "'Hi there — ready to practice speaking a new language? "
-        "What would you like to do? You can start from scratch with our "
-        "beginner track, pick a conversation topic, or just free-talk about anything.' "
-        "Based on the user's choice, transfer them to the appropriate agent: "
-        "- If they want structured beginner lessons, transfer to beginner_agent. "
-        "- If they want to discuss a topic, transfer to topic_agent. "
-        "- If they want free conversation, transfer to freestyle_agent. "
-        "If you cannot determine their intent, ask a clarifying question. "
-        "Be patient and allow the user to finish speaking before responding."
-    ),
+    instruction=load_prompt("es", "router", _ROUTER_FALLBACK),
     sub_agents=[_beginner, _topic, _freestyle],
 )
 

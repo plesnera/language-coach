@@ -14,56 +14,36 @@
 
 """FastAPI dependencies for authentication.
 
-When ``LOCAL_DEV=true`` a lightweight local token scheme is used so the
-application can run without Firebase / GCP credentials.
+In production Firebase Admin SDK verifies ID tokens directly.
+In local-dev mode, ``FIREBASE_AUTH_EMULATOR_HOST`` causes the SDK to talk
+to the Auth Emulator instead — no special bypass logic is needed.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
+import firebase_admin
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from firebase_admin import auth as firebase_auth
 
 from app.db import users as users_repo
 
 logger = logging.getLogger(__name__)
 
-_LOCAL_DEV = os.environ.get("LOCAL_DEV", "").lower() in ("1", "true", "yes")
 
-# Initialise the Firebase Admin SDK only when running against real Firebase.
-if not _LOCAL_DEV:
-    import firebase_admin
-    from firebase_admin import auth as firebase_auth
+def _ensure_firebase_app() -> None:
+    """Lazily initialise the Firebase Admin SDK.
 
+    When ``FIREBASE_AUTH_EMULATOR_HOST`` is set the SDK routes to the
+    emulator automatically.
+    """
     if not firebase_admin._apps:
         firebase_admin.initialize_app()
-else:
-    logger.info("LOCAL_DEV mode — Firebase Auth disabled, using local tokens")
 
 _bearer_scheme = HTTPBearer(auto_error=False)
-
-# ---------------------------------------------------------------------------
-# Default dev user (auto-created on first request with the bypass token)
-# ---------------------------------------------------------------------------
-_DEV_UID = "local-dev-user"
-_DEV_EMAIL = "dev@localhost"
-_DEV_DISPLAY_NAME = "Dev User"
-
-
-def _ensure_dev_user() -> dict[str, Any]:
-    """Return (or create) the default dev user for local development."""
-    user = users_repo.get(_DEV_UID)
-    if user is not None:
-        return user
-    return users_repo.create(
-        uid=_DEV_UID,
-        email=_DEV_EMAIL,
-        display_name=_DEV_DISPLAY_NAME,
-        role="admin",
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -74,18 +54,8 @@ def _ensure_dev_user() -> dict[str, Any]:
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> dict[str, Any]:
-    """Verify the auth token and return the user document.
-
-    In *LOCAL_DEV* mode the following tokens are accepted:
-    - ``local-{uid}`` — looks up the user by uid
-    - ``dev-bypass``   — auto-creates / returns a default admin dev user
-
-    In production mode a Firebase ID token is verified.
-    """
+    """Verify a Firebase ID token and return the Firestore user document."""
     if credentials is None:
-        if _LOCAL_DEV:
-            # No token at all → auto-provision dev user for convenience
-            return _ensure_dev_user()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing authentication token",
@@ -93,10 +63,7 @@ async def get_current_user(
 
     token = credentials.credentials
 
-    if _LOCAL_DEV:
-        return _resolve_local_token(token)
-
-    # --- Firebase path ---
+    _ensure_firebase_app()
     try:
         decoded = firebase_auth.verify_id_token(token)
     except Exception as exc:
@@ -107,19 +74,6 @@ async def get_current_user(
 
     uid: str = decoded["uid"]
     return _require_user(uid)
-
-
-def _resolve_local_token(token: str) -> dict[str, Any]:
-    """Parse a local-dev token and return the matching user."""
-    if token == "dev-bypass":
-        return _ensure_dev_user()
-    if token.startswith("local-"):
-        uid = token  # the full token *is* the uid
-        return _require_user(uid)
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid local token (expected 'local-<uid>' or 'dev-bypass')",
-    )
 
 
 def _require_user(uid: str) -> dict[str, Any]:

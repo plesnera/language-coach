@@ -23,10 +23,18 @@ def test_db_client_module_importable() -> None:
 
 
 def test_prompt_loader_returns_default() -> None:
-    """prompt_loader should return the default when Firestore is unavailable."""
-    from app.agents.prompt_loader import load_prompt
+    """prompt_loader should return the default when no active prompt exists."""
+    from unittest.mock import MagicMock, patch
 
-    result = load_prompt("es", "freestyle", "fallback")
+    mock_repo = MagicMock()
+    mock_repo.get_active.return_value = None
+    with patch.dict("sys.modules", {"app.db.system_prompts": mock_repo}):
+        from importlib import reload
+
+        import app.agents.prompt_loader
+
+        reload(app.agents.prompt_loader)
+        result = app.agents.prompt_loader.load_prompt("es", "freestyle", "fallback")
     assert result == "fallback"
 
 
@@ -34,6 +42,7 @@ def test_system_prompt_types_defined() -> None:
     """Verify PROMPT_TYPES constant is populated."""
     from app.db.system_prompts import PROMPT_TYPES
 
+    assert "router" in PROMPT_TYPES
     assert "beginner" in PROMPT_TYPES
     assert "freestyle" in PROMPT_TYPES
     assert "summarisation" in PROMPT_TYPES

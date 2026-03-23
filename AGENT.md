@@ -48,8 +48,7 @@ language-coach/
 │   │   ├── conversations.py      # conversations collection
 │   │   ├── progress.py           # user progress
 │   │   ├── system_prompts.py     # system_prompts collection
-│   │   ├── uploaded_documents.py # uploaded docs metadata
-│   │   └── memory_store.py       # In-memory Firestore mock for LOCAL_DEV
+│   │   └── uploaded_documents.py # uploaded docs metadata
 │   ├── services/
 │   │   ├── audio_transcription.py
 │   │   ├── document_processing.py
@@ -129,19 +128,28 @@ language-coach/
 # Install everything
 make install
 
-# Terminal 1: backend (auto-seeds Firestore with sample data)
-make local-backend
-# → Runs on http://localhost:8000 with LOCAL_DEV=true
+# Terminal 1: start the Firestore + Auth emulators
+make emulator
+# → Emulator UI at http://localhost:4000
 
-# Terminal 2: frontend dev server
+# Terminal 2: backend (auto-seeds Firestore with sample data)
+make local-backend
+# → Runs on http://localhost:8000
+
+# Terminal 3: frontend dev server
 make ui
 # → Runs on http://localhost:8501 with hot reload
+
+# Or start everything at once:
+make playground-dev
 ```
 
-In `LOCAL_DEV=true` mode:
-- Firestore is replaced with an in-memory store (`app/db/memory_store.py`)
-- Firebase Auth is bypassed; all requests get a dev admin user
-- The frontend auto-logs in as `dev@localhost` with token `dev-bypass`
+In local-dev mode:
+- Firestore SDK connects to the emulator via `FIRESTORE_EMULATOR_HOST=localhost:8080`
+- Firebase Auth SDK connects to the Auth Emulator via `FIREBASE_AUTH_EMULATOR_HOST=localhost:9099`
+- A `local-test-user@localhost` admin account is seeded in the Auth Emulator on startup
+- The frontend auto-logs in as `local-test-user@localhost` against the Auth Emulator
+- Data persists across restarts in `emulator-data/`
 
 ### Production-like
 
@@ -310,8 +318,10 @@ make lint                    # codespell + ruff + ty
 
 ## Environment Variables
 
-- `LOCAL_DEV=true` — enables in-memory Firestore + bypasses Firebase Auth
-- `VITE_LOCAL_DEV=true` — frontend local-dev mode (auto-login, no Firebase SDK)
+- `FIRESTORE_EMULATOR_HOST=localhost:8080` — routes Firestore SDK to the emulator
+- `FIREBASE_AUTH_EMULATOR_HOST=localhost:9099` — routes Firebase Auth SDK to the emulator
+- `LOCAL_DEV=true` — used by service stubs to return mock values when GCP APIs are unavailable
+- `VITE_LOCAL_DEV=true` — frontend connects to Auth Emulator and auto-logs in
 - `VITE_FIREBASE_API_KEY` — if unset, frontend defaults to local-dev mode
 - `GOOGLE_CLOUD_PROJECT` — GCP project ID (auto-detected from credentials)
 - `GOOGLE_CLOUD_LOCATION` — defaults to `europe-west1`
@@ -323,11 +333,14 @@ On startup (`expose_app.py`), the backend automatically seeds:
 - Languages: Spanish (`es`)
 - Courses: "Spanish for Beginners" with 4 lessons (Greetings, Numbers, Restaurant, Directions)
 - Topics: 3 default conversation topics (Vacation, Family, Jobs)
+- System Prompts: one active prompt per agent type (router, beginner, topic, freestyle)
+- Auth Emulator user: `local-test-user@localhost` (admin) when running against the emulator
 
 Seed functions are in each db module's `seed_defaults()` method.
 
 ## Important Notes
 
+- Emulator data is stored in `emulator-data/` (git-ignored) for persistence across restarts
 - All locally stored data lives under `data/` — images in `data/images/`, user document uploads in `data/uploads/`
 - `data/images/` is served as static files at `/uploads/images/` — it's mounted in `expose_app.py`
 - The frontend build output goes to `frontend/build/` and is served by the backend at `/` in production

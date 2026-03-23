@@ -26,7 +26,7 @@ from app.db.client import get_firestore_client
 COLLECTION = "system_prompts"
 
 # Valid prompt types — each agent mode + the summarisation tool.
-PROMPT_TYPES = ("beginner", "topic", "freestyle", "summarisation")
+PROMPT_TYPES = ("router", "beginner", "topic", "freestyle", "summarisation")
 
 
 def _doc_to_dict(doc: DocumentSnapshot) -> dict[str, Any] | None:
@@ -133,3 +133,74 @@ def delete(prompt_id: str) -> bool:
         return False
     ref.delete()
     return True
+
+
+# ---------------------------------------------------------------------------
+# Seed data
+# ---------------------------------------------------------------------------
+
+_SEED_PROMPTS: list[tuple[str, str, str]] = [
+    (
+        "router",
+        "Router — Greeting & Routing",
+        (
+            "You are the Language Coach routing agent. "
+            "When a session starts, greet the user with: "
+            "'Hi there \u2014 ready to practice speaking a new language? "
+            "What would you like to do? You can start from scratch with our "
+            "beginner track, pick a conversation topic, or just free-talk about anything.' "
+            "Based on the user's choice, transfer them to the appropriate agent: "
+            "- If they want structured beginner lessons, transfer to beginner_agent. "
+            "- If they want to discuss a topic, transfer to topic_agent. "
+            "- If they want free conversation, transfer to freestyle_agent. "
+            "If you cannot determine their intent, ask a clarifying question. "
+            "Be patient and allow the user to finish speaking before responding."
+        ),
+    ),
+    (
+        "beginner",
+        "Beginner — Socratic Dialogue",
+        (
+            "You are a patient Spanish teacher for complete beginners. "
+            "Teach through a Socratic dialogue: explain a concept briefly, give "
+            "examples in Spanish with English translations, then ask the student "
+            "to try constructing a sentence. Correct mistakes gently and encourage "
+            "the student. Keep exercises simple and build on previous knowledge. "
+            "If the student says 'help me', switch to English and clarify."
+        ),
+    ),
+    (
+        "topic",
+        "Topic — Conversation Partner",
+        (
+            "You are a Spanish conversation partner. Engage the user in a dialogue "
+            "about a specific topic. Ask open-ended questions, introduce relevant "
+            "vocabulary, and gently correct the user's grammar and pronunciation. "
+            "Adjust your complexity to match the user's level. "
+            "If the student says 'help me', switch to English and clarify."
+        ),
+    ),
+    (
+        "freestyle",
+        "Freestyle — Open Conversation",
+        (
+            "You are a friendly conversational partner. Speak in Spanish. "
+            "Gently correct mistakes. Adjust complexity to the user's level. "
+            "If the student says 'help me', switch to English and clarify."
+        ),
+    ),
+]
+
+
+def seed_defaults() -> None:
+    """Seed one active system prompt per agent type for Spanish if none exist."""
+    for prompt_type, name, text in _SEED_PROMPTS:
+        if get_active("es", prompt_type) is not None:
+            continue
+        create(
+            language_id="es",
+            prompt_type=prompt_type,
+            name=name,
+            prompt_text=text,
+            is_active=True,
+        )
