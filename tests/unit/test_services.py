@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import os
 
-# Ensure LOCAL_DEV is set so services return placeholders
+# Ensure LOCAL_DEV is set so services return placeholders.
+# Note: tests should run against the emulator, but service stubs still
+# check LOCAL_DEV to return mock values without real GCP credentials.
 os.environ.setdefault("LOCAL_DEV", "true")
 
 

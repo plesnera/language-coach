@@ -22,18 +22,12 @@ from google.genai import types
 
 from app.agents.prompt_loader import load_prompt
 
-DEFAULT_INSTRUCTION = (
-    "You are a patient Spanish teacher for complete beginners. "
-    "Teach through a Socratic dialogue: explain a concept briefly, give "
-    "examples in Spanish with English translations, then ask the student "
-    "to try constructing a sentence. Correct mistakes gently and encourage "
-    "the student. Keep exercises simple and build on previous knowledge. "
-    "If the student says 'help me', switch to English and clarify."
-)
+# Minimal fallback — only used when Firestore is completely unreachable.
+_BEGINNER_FALLBACK = "You are a patient Spanish teacher for complete beginners."
 
 
 def create_beginner_agent(language_id: str = "es") -> Agent:
-    instruction = load_prompt(language_id, "beginner", DEFAULT_INSTRUCTION)
+    instruction = load_prompt(language_id, "beginner", _BEGINNER_FALLBACK)
     return Agent(
         name="beginner_agent",
         model=Gemini(

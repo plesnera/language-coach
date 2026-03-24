@@ -22,15 +22,25 @@ playground: build-frontend-if-needed
 	@echo "|                                                                             |"
 	@echo "| 🔍 IMPORTANT: Select the 'app' folder to interact with your agent.          |"
 	@echo "==============================================================================="
-	LOCAL_DEV=true uv run python -m app.app_utils.expose_app --mode local --local-agent app.agents.router_agent.root_agent
+	FIRESTORE_EMULATOR_HOST=localhost:8080 \
+	FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 \
+	LOCAL_DEV=true \
+	uv run python -m app.app_utils.expose_app --mode local --local-agent app.agents.router_agent.root_agent
 
 # ==============================================================================
 # Local Development Commands
 # ==============================================================================
 
+# Start Firebase emulators (Firestore + Auth)
+emulator:
+	firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data
+
 # Launch local development server with hot-reload
 local-backend:
-	LOCAL_DEV=true uv run python -m app.app_utils.expose_app --mode local --port 8000  --local-agent app.agents.router_agent.root_agent
+	FIRESTORE_EMULATOR_HOST=localhost:8080 \
+	FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 \
+	LOCAL_DEV=true \
+	uv run python -m app.app_utils.expose_app --mode local --port 8000  --local-agent app.agents.router_agent.root_agent
 
 # ==============================================================================
 # ADK Live Commands
@@ -74,9 +84,12 @@ playground-dev:
 	@echo "|                                                                            |"
 	@echo "| 🌐 Frontend: http://localhost:8501                                         |"
 	@echo "| 🌐 Backend:  http://localhost:8000                                         |"
-	@echo "| 💡 When running in dev mode you don't have to authenticate                 |"
+	@echo "| 🔥 Emulator: http://localhost:4000                                         |"
+	@echo "| 💡 Auto-logs in as local-test-user@localhost                               |"
 	@echo "| 🔄 Both frontend and backend will auto-reload on changes                   |"
 	@echo "==============================================================================="
+	$(MAKE) emulator &
+	@sleep 3
 	@echo "Starting backend server..."
 	$(MAKE) local-backend &
 	@echo "Starting frontend dev server..."

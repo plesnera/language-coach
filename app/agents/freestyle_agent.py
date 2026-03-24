@@ -22,15 +22,12 @@ from google.genai import types
 
 from app.agents.prompt_loader import load_prompt
 
-DEFAULT_INSTRUCTION = (
-    "You are a friendly conversational partner. Speak in Spanish. "
-    "Gently correct mistakes. Adjust complexity to the user's level. "
-    "If the student says 'help me', switch to English and clarify."
-)
+# Minimal fallback — only used when Firestore is completely unreachable.
+_FREESTYLE_FALLBACK = "You are a friendly conversational partner. Speak in Spanish."
 
 
 def create_freestyle_agent(language_id: str = "es") -> Agent:
-    instruction = load_prompt(language_id, "freestyle", DEFAULT_INSTRUCTION)
+    instruction = load_prompt(language_id, "freestyle", _FREESTYLE_FALLBACK)
     return Agent(
         name="freestyle_agent",
         model=Gemini(

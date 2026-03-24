@@ -14,33 +14,28 @@
 
 """REST endpoints for authentication (``/api/auth/``).
 
-When ``LOCAL_DEV=true`` the endpoints skip Firebase and create users
-directly in the (in-memory) datastore, returning local tokens.
+All paths go through Firebase Auth.  In local-dev mode the
+``FIREBASE_AUTH_EMULATOR_HOST`` env var makes the SDK talk to the Auth
+Emulator instead of production Firebase.
 """
 
 from __future__ import annotations
 
 import logging
-import os
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
+from firebase_admin import auth as firebase_auth
 from pydantic import BaseModel, EmailStr
 
 from app.db import users as users_repo
 
 logger = logging.getLogger(__name__)
 
-_LOCAL_DEV = os.environ.get("LOCAL_DEV", "").lower() in ("1", "true", "yes")
-
-if not _LOCAL_DEV:
-    from firebase_admin import auth as firebase_auth
-
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-# ── Request / Response schemas ──────────────────────────────────────────────
+# ── Request / Response schemas ────────────────────────────────────────────────────────────
 
 
 class RegisterRequest(BaseModel):
@@ -61,48 +56,12 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 
-# ── Endpoints ───────────────────────────────────────────────────────────────
+# ── Endpoints ───────────────────────────────────────────────────────────────────
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
 def register(body: RegisterRequest) -> dict[str, Any]:
-    """Create a user.
-
-    In production this goes through Firebase Auth.
-    In LOCAL_DEV mode the user is created directly in the in-memory store.
-    """
-    if _LOCAL_DEV:
-        return _register_local(body)
-    return _register_firebase(body)
-
-
-@router.post("/forgot-password", status_code=200)
-def forgot_password(body: ForgotPasswordRequest) -> dict[str, str]:
-    """Send a password-reset email (no-op in local mode)."""
-    if not _LOCAL_DEV:
-        try:
-            firebase_auth.generate_password_reset_link(body.email)
-        except Exception:
-            pass  # Don't leak whether the email exists.
-    return {"detail": "If that email is registered, a reset link has been sent."}
-
-
-# ── Internal helpers ────────────────────────────────────────────────────────
-
-
-def _register_local(body: RegisterRequest) -> dict[str, Any]:
-    uid = f"local-{uuid.uuid4().hex[:12]}"
-    user_doc = users_repo.create(
-        uid=uid,
-        email=body.email,
-        display_name=body.display_name,
-        role="user",
-    )
-    user_doc["token"] = uid  # the uid doubles as the local bearer token
-    return user_doc
-
-
-def _register_firebase(body: RegisterRequest) -> dict[str, Any]:
+    """Create a user via Firebase Auth and store in Firestore."""
     try:
         fb_user = firebase_auth.create_user(
             email=body.email,
@@ -129,3 +88,13 @@ def _register_firebase(body: RegisterRequest) -> dict[str, Any]:
     )
     firebase_auth.set_custom_user_claims(fb_user.uid, {"role": "user"})
     return user_doc
+
+
+@router.post("/forgot-password", status_code=200)
+def forgot_password(body: ForgotPasswordRequest) -> dict[str, str]:
+    """Send a password-reset email."""
+    try:
+        firebase_auth.generate_password_reset_link(body.email)
+    except Exception:
+        pass  # Don't leak whether the email exists.
+    return {"detail": "If that email is registered, a reset link has been sent."}

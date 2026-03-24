@@ -33,19 +33,69 @@ from google.cloud import logging as google_cloud_logging
 from pydantic import BaseModel, Field
 from websockets.exceptions import ConnectionClosedError
 
+def _seed_local_test_user() -> None:
+    """Create a local-test-user in the Auth Emulator + Firestore on first startup."""
+    if not os.environ.get("FIREBASE_AUTH_EMULATOR_HOST"):
+        return
+    import firebase_admin
+    from firebase_admin import auth as firebase_auth
+
+    from app.db import users as users_repo
+
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app()
+
+    try:
+        firebase_auth.get_user_by_email("local-test-user@localhost")
+    except firebase_auth.UserNotFoundError:
+        user = firebase_auth.create_user(
+            email="local-test-user@localhost",
+            password="devpassword",
+            display_name="Local Test User",
+        )
+        users_repo.create(
+            uid=user.uid,
+            email=user.email,
+            display_name="Local Test User",
+            role="admin",
+        )
+        firebase_auth.set_custom_user_claims(user.uid, {"role": "admin"})
+        logging.info("Seeded local-test-user@localhost (admin) in Auth Emulator")
+    except Exception:
+        logging.exception("Failed to seed local-test-user (non-fatal)")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Ensure seed data exists so the app is usable out of the box."""
     from app.db import courses as courses_repo
     from app.db import languages as lang_repo
+    from app.db import system_prompts as prompts_repo
     from app.db import topics as topics_repo
 
     try:
         lang_repo.seed_defaults()
         courses_repo.seed_defaults()
         topics_repo.seed_defaults()
+        prompts_repo.seed_defaults()
     except Exception:
         logging.exception("Failed to seed default data (non-fatal)")
+
+    # Seed a local-test-user in the Auth Emulator (only when running against it)
+    _seed_local_test_user()
+
+    # Startup guard: warn about missing required prompts
+    try:
+        for prompt_type in ("router", "beginner", "topic", "freestyle"):
+            if prompts_repo.get_active("es", prompt_type) is None:
+                logging.warning(
+                    "No active system prompt found for type '%s'. "
+                    "Agent will use fallback text. Visit /admin/prompts to configure.",
+                    prompt_type,
+                )
+    except Exception:
+        logging.exception("Could not verify system prompts (non-fatal)")
+
     yield
 
 
@@ -99,20 +149,27 @@ if frontend_build_dir.exists():
     )
 # Cloud Logging — gracefully fall back to standard Python logging when
 # GCP credentials are unavailable (e.g. LOCAL_DEV mode).
-try:
-    logging_client = google_cloud_logging.Client()
-    logger = logging_client.logger(__name__)
-except Exception:
-    logging_client = None  # type: ignore[assignment]
+_LOCAL_DEV_FLAG = os.environ.get("LOCAL_DEV", "").lower() in ("1", "true", "yes")
 
-    class _StdLogger:
-        """Tiny adapter so ``logger.log_struct(...)`` works without GCP."""
 
-        @staticmethod
-        def log_struct(payload: dict, severity: str = "INFO") -> None:
-            logging.log(getattr(logging, severity, logging.INFO), "%s", payload)
+class _StdLogger:
+    """Tiny adapter so ``logger.log_struct(...)`` works without GCP."""
 
+    @staticmethod
+    def log_struct(payload: dict, severity: str = "INFO") -> None:
+        logging.log(getattr(logging, severity, logging.INFO), "%s", payload)
+
+
+if _LOCAL_DEV_FLAG:
+    logging_client = None
     logger = _StdLogger()  # type: ignore[assignment]
+else:
+    try:
+        logging_client = google_cloud_logging.Client()
+        logger = logging_client.logger(__name__)
+    except Exception:
+        logging_client = None  # type: ignore[assignment]
+        logger = _StdLogger()  # type: ignore[assignment]
 logging.basicConfig(level=logging.INFO)
 
 # Initialize default configuration

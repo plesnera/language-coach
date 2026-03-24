@@ -22,17 +22,12 @@ from google.genai import types
 
 from app.agents.prompt_loader import load_prompt
 
-DEFAULT_INSTRUCTION = (
-    "You are a Spanish conversation partner. Engage the user in a dialogue "
-    "about a specific topic. Ask open-ended questions, introduce relevant "
-    "vocabulary, and gently correct the user's grammar and pronunciation. "
-    "Adjust your complexity to match the user's level. "
-    "If the student says 'help me', switch to English and clarify."
-)
+# Minimal fallback — only used when Firestore is completely unreachable.
+_TOPIC_FALLBACK = "You are a Spanish conversation partner discussing a specific topic."
 
 
 def create_topic_agent(language_id: str = "es") -> Agent:
-    instruction = load_prompt(language_id, "topic", DEFAULT_INSTRUCTION)
+    instruction = load_prompt(language_id, "topic", _TOPIC_FALLBACK)
     return Agent(
         name="topic_agent",
         model=Gemini(

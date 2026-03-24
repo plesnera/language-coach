@@ -190,8 +190,8 @@ frontend/src/**/*.test.*
 frontend/src/**/__snapshots__/
 
 # Firebase
-firebase.json
 .firebase/
+emulator-data/
 
 # Google Cloud specific
 .gcloud/

@@ -14,9 +14,9 @@
 
 """Provides a shared Firestore client instance.
 
-When the environment variable ``LOCAL_DEV=true`` is set the module returns
-an in-memory store instead of a real Firestore client, so the application
-can run fully offline without GCP credentials.
+When ``FIRESTORE_EMULATOR_HOST`` is set the Firestore SDK automatically
+routes all traffic to the emulator, so no special branch is needed for
+local development.
 """
 
 from __future__ import annotations
@@ -26,25 +26,19 @@ from typing import Any
 
 _client: Any = None
 
-_LOCAL_DEV = os.environ.get("LOCAL_DEV", "").lower() in ("1", "true", "yes")
-
 
 def get_firestore_client() -> Any:
     """Return a module-level Firestore client (created once).
 
-    In local-dev mode an in-memory store is used instead.
+    If ``FIRESTORE_EMULATOR_HOST`` is set, the SDK connects to the
+    Firestore emulator automatically.
     """
     global _client
     if _client is None:
-        if _LOCAL_DEV:
-            from app.db.memory_store import MemoryClient
+        from google.cloud import firestore
 
-            _client = MemoryClient()
-        else:
-            from google.cloud import firestore
-
-            project = os.environ.get("GOOGLE_CLOUD_PROJECT_ID") or os.environ.get(
-                "GOOGLE_CLOUD_PROJECT"
-            )
-            _client = firestore.Client(project=project)
+        project = os.environ.get("GOOGLE_CLOUD_PROJECT_ID") or os.environ.get(
+            "GOOGLE_CLOUD_PROJECT"
+        )
+        _client = firestore.Client(project=project)
     return _client

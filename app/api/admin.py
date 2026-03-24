@@ -289,11 +289,13 @@ def update_user_role(uid: str, body: UpdateUserRoleRequest) -> dict[str, Any]:
     result = users_repo.update(uid, {"role": body.role})
     if result is None:
         raise HTTPException(404, "User not found")
-    # Sync to Firebase custom claims (skip in local-dev mode)
-    if os.environ.get("LOCAL_DEV", "").lower() not in ("1", "true", "yes"):
+    # Sync to Firebase custom claims (works with emulator in dev too)
+    try:
         from firebase_admin import auth as firebase_auth
 
         firebase_auth.set_custom_user_claims(uid, {"role": body.role})
+    except Exception:
+        pass  # Non-fatal: Firestore doc is already updated
     return result
 
 
