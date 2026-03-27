@@ -15,10 +15,16 @@ import pytest
 # Emulator guard
 # ---------------------------------------------------------------------------
 
-requires_emulator = pytest.mark.skipif(
-    not os.environ.get("FIRESTORE_EMULATOR_HOST"),
-    reason="FIRESTORE_EMULATOR_HOST not set — start the Firestore emulator first",
-)
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Skip tests marked requires_emulator when the emulator is not running."""
+    if os.environ.get("FIRESTORE_EMULATOR_HOST"):
+        return
+    skip = pytest.mark.skip(
+        reason="FIRESTORE_EMULATOR_HOST not set — start the Firestore emulator first"
+    )
+    for item in items:
+        if item.get_closest_marker("requires_emulator"):
+            item.add_marker(skip)
 
 
 @pytest.fixture()

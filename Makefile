@@ -129,6 +129,11 @@ setup-dev-env:
 # ==============================================================================
 
 # Run unit and integration tests
+# Unit tests run without the emulator (emulator-requiring tests are skipped).
+# Integration tests require the Firestore emulator — start it first:
+#   make emulator          (in a separate terminal)
+# Then run the full suite:
+#   FIRESTORE_EMULATOR_HOST=localhost:8080 GOOGLE_CLOUD_PROJECT=demo-test make test
 test:
 	uv sync --dev
 	uv run pytest tests/unit && uv run pytest tests/integration

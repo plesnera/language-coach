@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from google.cloud.firestore_v1.base_document import DocumentSnapshot
+from google.cloud import firestore
 
 from app.db.client import get_firestore_client
 
@@ -47,9 +48,9 @@ def get_active(language_id: str, prompt_type: str) -> dict[str, Any] | None:
     db = get_firestore_client()
     docs = (
         db.collection(COLLECTION)
-        .where("language_id", "==", language_id)
-        .where("type", "==", prompt_type)
-        .where("is_active", "==", True)
+        .where(filter=firestore.FieldFilter("language_id", "==", language_id))
+        .where(filter=firestore.FieldFilter("type", "==", prompt_type))
+        .where(filter=firestore.FieldFilter("is_active", "==", True))
         .limit(1)
         .stream()
     )
@@ -62,9 +63,11 @@ def list_by_language(
     language_id: str, prompt_type: str | None = None
 ) -> list[dict[str, Any]]:
     db = get_firestore_client()
-    query = db.collection(COLLECTION).where("language_id", "==", language_id)
+    query = db.collection(COLLECTION).where(
+        filter=firestore.FieldFilter("language_id", "==", language_id)
+    )
     if prompt_type is not None:
-        query = query.where("type", "==", prompt_type)
+        query = query.where(filter=firestore.FieldFilter("type", "==", prompt_type))
     return [d for doc in query.stream() if (d := _doc_to_dict(doc)) is not None]
 
 
@@ -112,9 +115,9 @@ def activate(prompt_id: str) -> dict[str, Any] | None:
     # Deactivate siblings
     siblings = (
         db.collection(COLLECTION)
-        .where("language_id", "==", data["language_id"])
-        .where("type", "==", data["type"])
-        .where("is_active", "==", True)
+        .where(filter=firestore.FieldFilter("language_id", "==", data["language_id"]))
+        .where(filter=firestore.FieldFilter("type", "==", data["type"]))
+        .where(filter=firestore.FieldFilter("is_active", "==", True))
         .stream()
     )
     for sibling in siblings:

@@ -122,6 +122,17 @@ def create_lesson(course_id: str, body: CreateLessonRequest) -> dict[str, Any]:
     return courses_repo.create_lesson(course_id, **body.model_dump())
 
 
+class ReorderLessonsRequest(BaseModel):
+    lesson_ids: list[str]
+
+
+@router.put("/courses/{course_id}/lessons/reorder")
+def reorder_lessons(course_id: str, body: ReorderLessonsRequest) -> dict[str, str]:
+    for idx, lid in enumerate(body.lesson_ids):
+        courses_repo.update_lesson(course_id, lid, {"sort_order": idx})
+    return {"status": "ok"}
+
+
 class UpdateLessonRequest(BaseModel):
     title: str | None = None
     objective: str | None = None
@@ -147,17 +158,6 @@ def update_lesson(
 def delete_lesson(course_id: str, lesson_id: str) -> None:
     if not courses_repo.delete_lesson(course_id, lesson_id):
         raise HTTPException(404, "Lesson not found")
-
-
-class ReorderLessonsRequest(BaseModel):
-    lesson_ids: list[str]
-
-
-@router.put("/courses/{course_id}/lessons/reorder")
-def reorder_lessons(course_id: str, body: ReorderLessonsRequest) -> dict[str, str]:
-    for idx, lid in enumerate(body.lesson_ids):
-        courses_repo.update_lesson(course_id, lid, {"sort_order": idx})
-    return {"status": "ok"}
 
 
 # ── Topics ──────────────────────────────────────────────────────────────────

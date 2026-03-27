@@ -97,6 +97,9 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 pythonpath = "."
 asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "requires_emulator: skip when Firestore emulator is not running (set FIRESTORE_EMULATOR_HOST)",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app","frontend"]

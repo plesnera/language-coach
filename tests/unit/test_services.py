@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import os
 
+import pytest
+
 # Ensure LOCAL_DEV is set so services return placeholders.
 # Note: tests should run against the emulator, but service stubs still
 # check LOCAL_DEV to return mock values without real GCP credentials.
@@ -95,6 +97,7 @@ def test_summarise_local_dev() -> None:
 # ── DB Repos (with in-memory store) ─────────────────────────────────────────
 
 
+@pytest.mark.requires_emulator
 def test_conversations_repo_crud() -> None:
     from app.db import conversations as conv_repo
 
@@ -115,6 +118,7 @@ def test_conversations_repo_crud() -> None:
     assert len(items) >= 1
 
 
+@pytest.mark.requires_emulator
 def test_conversations_append_message() -> None:
     from app.db import conversations as conv_repo
 
@@ -126,6 +130,7 @@ def test_conversations_append_message() -> None:
     assert len(updated["messages"]) >= 1
 
 
+@pytest.mark.requires_emulator
 def test_progress_repo_upsert() -> None:
     from app.db import progress as progress_repo
 
@@ -152,6 +157,7 @@ def test_progress_repo_upsert() -> None:
     assert len(items) >= 1
 
 
+@pytest.mark.requires_emulator
 def test_uploaded_documents_repo() -> None:
     from app.db import uploaded_documents as docs_repo
 
