@@ -25,9 +25,8 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 # Prefer project/location from .env; fall back to google.auth.default()
-project_id = (
-    os.environ.get("GOOGLE_CLOUD_PROJECT_ID")
-    or os.environ.get("GOOGLE_CLOUD_PROJECT")
+project_id = os.environ.get("GOOGLE_CLOUD_PROJECT_ID") or os.environ.get(
+    "GOOGLE_CLOUD_PROJECT"
 )
 if not project_id:
     _, project_id = google.auth.default()

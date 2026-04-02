@@ -128,8 +128,27 @@ class ReorderLessonsRequest(BaseModel):
 
 @router.put("/courses/{course_id}/lessons/reorder")
 def reorder_lessons(course_id: str, body: ReorderLessonsRequest) -> dict[str, str]:
-    for idx, lid in enumerate(body.lesson_ids):
-        courses_repo.update_lesson(course_id, lid, {"sort_order": idx})
+    if len(body.lesson_ids) > 500:
+        raise HTTPException(422, "Cannot reorder more than 500 lessons at once")
+    if len(body.lesson_ids) != len(set(body.lesson_ids)):
+        raise HTTPException(400, "Duplicate lesson IDs are not allowed")
+
+    existing_lesson_ids = {
+        lesson["id"] for lesson in courses_repo.list_lessons(course_id)
+    }
+    submitted_lesson_ids = set(body.lesson_ids)
+    unknown_ids = sorted(submitted_lesson_ids - existing_lesson_ids)
+    if unknown_ids:
+        raise HTTPException(400, f"Unknown lesson IDs: {unknown_ids}")
+    missing_ids = sorted(existing_lesson_ids - submitted_lesson_ids)
+    if missing_ids:
+        raise HTTPException(400, f"Missing lesson IDs: {missing_ids}")
+
+    updates = [
+        {"lesson_id": lesson_id, "sort_order": idx}
+        for idx, lesson_id in enumerate(body.lesson_ids)
+    ]
+    courses_repo.batch_update_lessons(course_id, updates)
     return {"status": "ok"}
 
 
@@ -322,7 +341,6 @@ def list_images() -> list[dict[str, Any]]:
 @router.post("/images/upload", status_code=201)
 async def upload_image(file: UploadFile) -> dict[str, Any]:
     """Upload an image file and add it to the library."""
-    import os
     import uuid as _uuid
     from pathlib import Path
 
@@ -333,6 +351,7 @@ async def upload_image(file: UploadFile) -> dict[str, Any]:
     bucket_name = os.environ.get("IMAGES_BUCKET_NAME")
     if bucket_name:
         from google.cloud import storage
+
         client = storage.Client()
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(unique_name)

@@ -43,6 +43,7 @@ def _ensure_firebase_app() -> None:
     if not firebase_admin._apps:
         firebase_admin.initialize_app()
 
+
 _bearer_scheme = HTTPBearer(auto_error=False)
 
 

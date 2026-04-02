@@ -91,10 +91,7 @@ def delete(course_id: str) -> bool:
     ref = db.collection(COLLECTION).document(course_id)
     if not ref.get().exists:
         return False
-    # Delete sub-collection lessons first
-    for lesson in ref.collection(LESSONS_SUB).stream():
-        lesson.reference.delete()
-    ref.delete()
+    batch_delete_lessons(course_id)
     return True
 
 
@@ -171,6 +168,37 @@ def update_lesson(
     return _doc_to_dict(ref.get())
 
 
+def batch_update_lessons(course_id: str, updates: list[dict[str, Any]]) -> None:
+    """Atomically update sort_order for multiple lessons using a WriteBatch.
+
+    ``updates`` is a list of ``{"lesson_id": str, "sort_order": int}`` dicts.
+    All lesson IDs must already exist; an unknown ID causes the entire batch to
+    fail at commit time (Firestore raises an error on update of a missing doc).
+    Empty list is a no-op.
+    """
+    if not updates:
+        return
+    db = get_firestore_client()
+    now = datetime.now(timezone.utc)
+    batch = db.batch()
+    lessons_col = db.collection(COLLECTION).document(course_id).collection(LESSONS_SUB)
+    for item in updates:
+        ref = lessons_col.document(item["lesson_id"])
+        batch.update(ref, {"sort_order": item["sort_order"], "updated_at": now})
+    batch.commit()
+
+
+def batch_delete_lessons(course_id: str) -> None:
+    """Atomically delete all lessons for a course and the course document."""
+    db = get_firestore_client()
+    course_ref = db.collection(COLLECTION).document(course_id)
+    batch = db.batch()
+    for lesson in course_ref.collection(LESSONS_SUB).stream():
+        batch.delete(lesson.reference)
+    batch.delete(course_ref)
+    batch.commit()
+
+
 def delete_lesson(course_id: str, lesson_id: str) -> bool:
     db = get_firestore_client()
     ref = (
@@ -216,7 +244,7 @@ def seed_defaults() -> None:
             "objective": "Count from 1 to 100 and use numbers in context.",
             "teaching_prompt": (
                 "You are a friendly Spanish tutor. Teach the student numbers "
-                "from 1–100. Practice by asking them their age, phone number, "
+                "from 1-100. Practice by asking them their age, phone number, "
                 "or prices. Gently correct pronunciation."
             ),
             "image_url": get_or_upload_seed_image("castagnettes.jpg"),
@@ -241,7 +269,9 @@ def seed_defaults() -> None:
                 "(izquierda, derecha, todo recto, cerca, lejos) and phrases "
                 "like ¿dónde está…? Practice with a role-play scenario."
             ),
-            "image_url": get_or_upload_seed_image("75ddbd3b5d8c410180ffcf146c7360dc.jpg"),
+            "image_url": get_or_upload_seed_image(
+                "75ddbd3b5d8c410180ffcf146c7360dc.jpg"
+            ),
             "sort_order": 4,
         },
     ]

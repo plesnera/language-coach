@@ -63,9 +63,7 @@ async def upload_document(
         text = extract_text(file_bytes, filename)
     except Exception as exc:
         logger.exception("Text extraction failed for %s", filename)
-        raise HTTPException(
-            500, f"Could not extract text: {exc}"
-        ) from exc
+        raise HTTPException(500, f"Could not extract text: {exc}") from exc
 
     gcs_path = save_upload(user["uid"], filename, file_bytes)
 

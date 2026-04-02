@@ -90,9 +90,7 @@ def _transcribe_long(
 
     parts: list[str] = []
     for result in response.results.values():
-        parts.append(
-            _results_to_text(result.transcript.results)
-        )
+        parts.append(_results_to_text(result.transcript.results))
     return "\n".join(parts)
 
 

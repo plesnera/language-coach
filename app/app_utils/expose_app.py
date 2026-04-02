@@ -33,6 +33,7 @@ from google.cloud import logging as google_cloud_logging
 from pydantic import BaseModel, Field
 from websockets.exceptions import ConnectionClosedError
 
+
 def _seed_local_test_user() -> None:
     """Create a local-test-user in the Auth Emulator + Firestore on first startup."""
     if not os.environ.get("FIREBASE_AUTH_EMULATOR_HOST"):
@@ -162,14 +163,14 @@ class _StdLogger:
 
 if _LOCAL_DEV_FLAG:
     logging_client = None
-    logger = _StdLogger()  # type: ignore[assignment]
+    logger = _StdLogger()
 else:
     try:
         logging_client = google_cloud_logging.Client()
         logger = logging_client.logger(__name__)
     except Exception:
-        logging_client = None  # type: ignore[assignment]
-        logger = _StdLogger()  # type: ignore[assignment]
+        logging_client = None
+        logger = _StdLogger()
 logging.basicConfig(level=logging.INFO)
 
 # Initialize default configuration

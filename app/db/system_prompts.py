@@ -19,8 +19,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from google.cloud.firestore_v1.base_document import DocumentSnapshot
 from google.cloud import firestore
+from google.cloud.firestore_v1.base_document import DocumentSnapshot
 
 from app.db.client import get_firestore_client
 

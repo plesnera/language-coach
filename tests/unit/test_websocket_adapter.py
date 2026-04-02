@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -82,9 +81,7 @@ async def test_receive_exits_on_connection_closed(
     """ConnectionClosedError should terminate the receive loop cleanly."""
     from websockets.exceptions import ConnectionClosedError
 
-    mock_websocket.receive = AsyncMock(
-        side_effect=ConnectionClosedError(None, None)
-    )
+    mock_websocket.receive = AsyncMock(side_effect=ConnectionClosedError(None, None))
     await adapter.receive_from_client()
     assert adapter.input_queue.empty()
 

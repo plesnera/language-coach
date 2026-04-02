@@ -51,12 +51,7 @@ def get(uid: str, course_id: str) -> dict[str, Any] | None:
 
 def list_by_user(uid: str) -> list[dict[str, Any]]:
     db = get_firestore_client()
-    docs = (
-        db.collection(USERS_COL)
-        .document(uid)
-        .collection(PROGRESS_SUB)
-        .stream()
-    )
+    docs = db.collection(USERS_COL).document(uid).collection(PROGRESS_SUB).stream()
     return [d for doc in docs if (d := _doc_to_dict(doc)) is not None]
 
 

@@ -60,6 +60,10 @@ export function AdminLessonsPage() {
   const [imageLibrary, setImageLibrary] = useState<LibraryImage[]>([]);
   const [showLibrary, setShowLibrary] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [reordering, setReordering] = useState(false);
+  const [reorderError, setReorderError] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
 
   // ---- Load lessons ----
   const loadLessons = useCallback(async () => {
@@ -172,28 +176,41 @@ export function AdminLessonsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this lesson?')) return;
+  const confirmDelete = (id: string) => {
+    setLessonToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!lessonToDelete) return;
     try {
       await fetch(
-        `${API_BASE}/api/admin/courses/${courseId}/lessons/${id}`,
+        `${API_BASE}/api/admin/courses/${courseId}/lessons/${lessonToDelete}`,
         { method: 'DELETE', headers },
       );
       await loadLessons();
     } catch (err) {
       console.error('Failed to delete lesson', err);
+    } finally {
+      setIsDeleteModalOpen(false);
+      setLessonToDelete(null);
     }
   };
 
   const moveLesson = async (index: number, direction: 'up' | 'down') => {
+    if (reordering) return;
     const swapIdx = direction === 'up' ? index - 1 : index + 1;
     if (swapIdx < 0 || swapIdx >= lessons.length) return;
+
+    const previousLessons = [...lessons];
     const newLessons = [...lessons];
     [newLessons[swapIdx], newLessons[index]] = [newLessons[index], newLessons[swapIdx]];
     setLessons(newLessons);
-    // Persist new order
+    setReordering(true);
+    setReorderError(null);
+
     try {
-      await fetch(
+      const res = await fetch(
         `${API_BASE}/api/admin/courses/${courseId}/lessons/reorder`,
         {
           method: 'PUT',
@@ -201,8 +218,18 @@ export function AdminLessonsPage() {
           body: JSON.stringify({ lesson_ids: newLessons.map((l) => l.id) }),
         },
       );
+      if (!res.ok) {
+        setLessons(previousLessons);
+        setReorderError("Couldn't reorder — please try again");
+        setTimeout(() => setReorderError(null), 3000);
+      }
     } catch (err) {
       console.error('Failed to reorder', err);
+      setLessons(previousLessons);
+      setReorderError("Couldn't reorder — please try again");
+      setTimeout(() => setReorderError(null), 3000);
+    } finally {
+      setReordering(false);
     }
   };
 
@@ -287,6 +314,10 @@ export function AdminLessonsPage() {
         </HandDrawnButton>
       </div>
 
+      {reorderError && (
+        <p className="text-[#DC2626] text-sm font-medium mt-2">{reorderError}</p>
+      )}
+
       <div className="space-y-4">
         {lessons.map((lesson, idx) => (
           <HandDrawnCard
@@ -298,15 +329,21 @@ export function AdminLessonsPage() {
               <div className="flex flex-col gap-1">
                 <button
                   onClick={() => moveLesson(idx, 'up')}
-                  disabled={idx === 0}
-                  className="p-1 text-gray-400 hover:text-[#1A1A1A] disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                  disabled={idx === 0 || reordering}
+                  aria-label="Move lesson up"
+                  className={`p-2 text-gray-400 hover:text-[#1A1A1A] disabled:opacity-30 disabled:hover:text-gray-400 transition-colors ${
+                    reordering ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   <ArrowUp size={18} />
                 </button>
                 <button
                   onClick={() => moveLesson(idx, 'down')}
-                  disabled={idx === lessons.length - 1}
-                  className="p-1 text-gray-400 hover:text-[#1A1A1A] disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                  disabled={idx === lessons.length - 1 || reordering}
+                  aria-label="Move lesson down"
+                  className={`p-2 text-gray-400 hover:text-[#1A1A1A] disabled:opacity-30 disabled:hover:text-gray-400 transition-colors ${
+                    reordering ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   <ArrowDown size={18} />
                 </button>
@@ -340,7 +377,7 @@ export function AdminLessonsPage() {
               </HandDrawnButton>
               <HandDrawnButton
                 variant="outline"
-                onClick={() => handleDelete(lesson.id)}
+                onClick={() => confirmDelete(lesson.id)}
                 className="px-3 py-2 text-[#DC2626] hover:bg-red-50 border-transparent hover:border-[#DC2626]"
               >
                 <Trash2 size={16} />
@@ -549,6 +586,37 @@ export function AdminLessonsPage() {
                 disabled={!currentLesson.title || saving}
               >
                 {saving ? 'Saving…' : 'Save Lesson'}
+              </HandDrawnButton>
+            </div>
+          </HandDrawnCard>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <HandDrawnCard className="w-full max-w-sm bg-white border-[#DC2626]" rotate="left">
+            <h2 className="font-heading text-2xl font-bold mb-4 text-[#DC2626]">
+              Are you sure?
+            </h2>
+            <p className="text-gray-600 mb-8">
+              This will permanently delete the lesson. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <HandDrawnButton
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setLessonToDelete(null);
+                }}
+              >
+                Cancel
+              </HandDrawnButton>
+              <HandDrawnButton
+                variant="primary"
+                className="bg-[#DC2626] hover:bg-red-800"
+                onClick={handleDelete}
+              >
+                Delete
               </HandDrawnButton>
             </div>
           </HandDrawnCard>

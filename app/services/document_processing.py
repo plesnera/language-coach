@@ -13,9 +13,7 @@ from pathlib import Path
 _LOCAL_DEV = os.environ.get("LOCAL_DEV", "").lower() in ("1", "true", "yes")
 
 ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md", ".docx"}
-_UPLOAD_BUCKET = os.environ.get(
-    "UPLOAD_BUCKET", "language-coach-uploads"
-)
+_UPLOAD_BUCKET = os.environ.get("UPLOAD_BUCKET", "language-coach-uploads")
 _LOCAL_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "uploads"
 
 

@@ -127,8 +127,7 @@ def test_get_lesson_detail(seeded_client):
     courses = client.get("/api/courses/", params={"language_id": "es"}).json()
     course_id = courses[0]["id"]
     lessons = client.get(f"/api/courses/{course_id}/lessons").json()
-    if not lessons:
-        pytest.skip("No lessons seeded")
+    assert lessons, "No lessons seeded"
     lesson_id = lessons[0]["id"]
 
     resp = client.get(f"/api/courses/{course_id}/lessons/{lesson_id}")
@@ -161,8 +160,10 @@ def test_register_happy_path(seeded_client):
     fake_fb_user.uid = "new-uid-123"
     fake_fb_user.email = "newuser@example.com"
 
-    with patch("firebase_admin.auth.create_user", return_value=fake_fb_user), \
-         patch("firebase_admin.auth.set_custom_user_claims"):
+    with (
+        patch("firebase_admin.auth.create_user", return_value=fake_fb_user),
+        patch("firebase_admin.auth.set_custom_user_claims"),
+    ):
         resp = client.post(
             "/api/auth/register",
             json={
@@ -196,7 +197,9 @@ def test_register_duplicate_email(seeded_client):
 
 def test_forgot_password_always_200(seeded_client):
     client, _, _ = seeded_client
-    with patch("firebase_admin.auth.generate_password_reset_link", return_value="http://reset"):
+    with patch(
+        "firebase_admin.auth.generate_password_reset_link", return_value="http://reset"
+    ):
         resp = client.post(
             "/api/auth/forgot-password",
             json={"email": "anyone@example.com"},
@@ -210,7 +213,7 @@ def test_forgot_password_always_200(seeded_client):
 
 
 def test_progress_create_and_update(seeded_client):
-    client, fake_admin, _ = seeded_client
+    client, _, _ = seeded_client
     # Create
     resp = client.put(
         "/api/progress/",
@@ -252,15 +255,21 @@ def test_progress_user_isolation(seeded_client):
                 "/api/progress/",
                 json={"course_id": "iso-course", "current_lesson_index": 5},
             )
-            user_resp = user_client.get("/api/progress/")  # noqa: F841
+            user_resp = user_client.get("/api/progress/")
+            assert user_resp.status_code == 200
+            user_ids = {r["id"] for r in user_resp.json()["course_progress"]}
+            assert "iso-course" in user_ids
     finally:
         # Always restore admin — even if an assertion above fails
         app.dependency_overrides[get_current_user] = lambda: fake_admin
         app.dependency_overrides[require_admin] = lambda: fake_admin
 
     admin_resp = client.get("/api/progress/")
-    admin_ids = {r["id"] for r in admin_resp.json()}
-    assert "iso-course" not in admin_ids  # admin's progress should not contain user's entry
+    assert admin_resp.status_code == 200
+    admin_ids = {r["id"] for r in admin_resp.json()["course_progress"]}
+    assert (
+        "iso-course" not in admin_ids
+    )  # admin's progress should not contain user's entry
 
 
 # ---------------------------------------------------------------------------
@@ -336,13 +345,20 @@ def test_admin_course_create_update_delete(seeded_client):
     # Create
     resp = client.post(
         "/api/admin/courses",
-        json={"title": "Test Course", "description": "Desc", "language_id": "es", "level": "beginner"},
+        json={
+            "title": "Test Course",
+            "description": "Desc",
+            "language_id": "es",
+            "level": "beginner",
+        },
     )
     assert resp.status_code == 201
     course_id = resp.json()["id"]
 
     # Update
-    resp2 = client.put(f"/api/admin/courses/{course_id}", json={"title": "Updated Title"})
+    resp2 = client.put(
+        f"/api/admin/courses/{course_id}", json={"title": "Updated Title"}
+    )
     assert resp2.status_code == 200
     assert resp2.json()["title"] == "Updated Title"
 
@@ -366,27 +382,44 @@ def test_admin_lessons_crud_and_reorder(seeded_client):
     # Create a course to attach lessons to
     course = client.post(
         "/api/admin/courses",
-        json={"title": "Lesson Test Course", "description": "D", "language_id": "es", "level": "beginner"},
+        json={
+            "title": "Lesson Test Course",
+            "description": "D",
+            "language_id": "es",
+            "level": "beginner",
+        },
     ).json()
     cid = course["id"]
 
     # Create lesson
     resp = client.post(
         f"/api/admin/courses/{cid}/lessons",
-        json={"title": "Lesson 1", "objective": "Obj", "teaching_prompt": "Prompt", "sort_order": 0},
+        json={
+            "title": "Lesson 1",
+            "objective": "Obj",
+            "teaching_prompt": "Prompt",
+            "sort_order": 0,
+        },
     )
     assert resp.status_code == 201
     lid1 = resp.json()["id"]
 
     resp2 = client.post(
         f"/api/admin/courses/{cid}/lessons",
-        json={"title": "Lesson 2", "objective": "Obj", "teaching_prompt": "Prompt", "sort_order": 1},
+        json={
+            "title": "Lesson 2",
+            "objective": "Obj",
+            "teaching_prompt": "Prompt",
+            "sort_order": 1,
+        },
     )
     assert resp2.status_code == 201
     lid2 = resp2.json()["id"]
 
     # Update
-    resp3 = client.put(f"/api/admin/courses/{cid}/lessons/{lid1}", json={"title": "Lesson 1 Updated"})
+    resp3 = client.put(
+        f"/api/admin/courses/{cid}/lessons/{lid1}", json={"title": "Lesson 1 Updated"}
+    )
     assert resp3.status_code == 200
     assert resp3.json()["title"] == "Lesson 1 Updated"
 
@@ -402,6 +435,153 @@ def test_admin_lessons_crud_and_reorder(seeded_client):
     assert resp5.status_code == 204
 
     # Cleanup
+    client.delete(f"/api/admin/courses/{cid}")
+
+
+def test_admin_lessons_reorder_invalid_lesson_id_returns_400(seeded_client):
+    client, _, _ = seeded_client
+
+    course = client.post(
+        "/api/admin/courses",
+        json={
+            "title": "Invalid Reorder Course",
+            "description": "D",
+            "language_id": "es",
+        },
+    ).json()
+    cid = course["id"]
+
+    created = client.post(
+        f"/api/admin/courses/{cid}/lessons",
+        json={
+            "title": "Lesson 1",
+            "objective": "Obj",
+            "teaching_prompt": "Prompt",
+            "sort_order": 0,
+        },
+    ).json()
+    valid_lesson_id = created["id"]
+
+    resp = client.put(
+        f"/api/admin/courses/{cid}/lessons/reorder",
+        json={"lesson_ids": [valid_lesson_id, "missing-lesson-id"]},
+    )
+    assert resp.status_code == 400
+    assert "Unknown lesson IDs" in resp.json()["detail"]
+    assert "missing-lesson-id" in resp.json()["detail"]
+
+    client.delete(f"/api/admin/courses/{cid}")
+
+
+def test_admin_lessons_reorder_empty_list_returns_200(seeded_client):
+    client, _, _ = seeded_client
+
+    course = client.post(
+        "/api/admin/courses",
+        json={"title": "Empty Reorder Course", "description": "D", "language_id": "es"},
+    ).json()
+    cid = course["id"]
+
+    resp = client.put(
+        f"/api/admin/courses/{cid}/lessons/reorder",
+        json={"lesson_ids": []},
+    )
+    assert resp.status_code == 200
+
+    client.delete(f"/api/admin/courses/{cid}")
+
+
+def test_admin_lessons_reorder_more_than_500_returns_422(seeded_client):
+    client, _, _ = seeded_client
+
+    course = client.post(
+        "/api/admin/courses",
+        json={"title": "Large Reorder Course", "description": "D", "language_id": "es"},
+    ).json()
+    cid = course["id"]
+
+    resp = client.put(
+        f"/api/admin/courses/{cid}/lessons/reorder",
+        json={"lesson_ids": [f"lesson-{i}" for i in range(501)]},
+    )
+    assert resp.status_code == 422
+    assert "Cannot reorder more than 500 lessons" in resp.json()["detail"]
+
+    client.delete(f"/api/admin/courses/{cid}")
+
+
+def test_admin_lessons_reorder_missing_existing_ids_returns_400(seeded_client):
+    client, _, _ = seeded_client
+
+    course = client.post(
+        "/api/admin/courses",
+        json={
+            "title": "Missing Reorder Course",
+            "description": "D",
+            "language_id": "es",
+        },
+    ).json()
+    cid = course["id"]
+
+    created_1 = client.post(
+        f"/api/admin/courses/{cid}/lessons",
+        json={
+            "title": "Lesson 1",
+            "objective": "Obj",
+            "teaching_prompt": "Prompt",
+            "sort_order": 0,
+        },
+    ).json()
+    client.post(
+        f"/api/admin/courses/{cid}/lessons",
+        json={
+            "title": "Lesson 2",
+            "objective": "Obj",
+            "teaching_prompt": "Prompt",
+            "sort_order": 1,
+        },
+    )
+
+    resp = client.put(
+        f"/api/admin/courses/{cid}/lessons/reorder",
+        json={"lesson_ids": [created_1["id"]]},
+    )
+    assert resp.status_code == 400
+    assert "Missing lesson IDs" in resp.json()["detail"]
+
+    client.delete(f"/api/admin/courses/{cid}")
+
+
+def test_admin_lessons_reorder_duplicate_ids_returns_400(seeded_client):
+    client, _, _ = seeded_client
+
+    course = client.post(
+        "/api/admin/courses",
+        json={
+            "title": "Duplicate Reorder Course",
+            "description": "D",
+            "language_id": "es",
+        },
+    ).json()
+    cid = course["id"]
+
+    created = client.post(
+        f"/api/admin/courses/{cid}/lessons",
+        json={
+            "title": "Lesson 1",
+            "objective": "Obj",
+            "teaching_prompt": "Prompt",
+            "sort_order": 0,
+        },
+    ).json()
+
+    resp = client.put(
+        f"/api/admin/courses/{cid}/lessons/reorder",
+        json={"lesson_ids": [created["id"], created["id"]]},
+    )
+    assert resp.status_code == 400
+    assert "Duplicate lesson IDs are not allowed" in resp.json()["detail"]
+
     client.delete(f"/api/admin/courses/{cid}")
 
 
@@ -500,7 +680,9 @@ def test_admin_prompt_activation_deactivates_siblings(seeded_client):
     all_prompts = client.get("/api/admin/prompts", params={"language_id": "es"}).json()
     p1_updated = next((p for p in all_prompts if p["id"] == p1["id"]), None)
     assert p1_updated is not None, "p1 should still exist (not deleted)"
-    assert p1_updated["is_active"] is False, "p1 should have been deactivated when p2 was activated"
+    assert p1_updated["is_active"] is False, (
+        "p1 should have been deactivated when p2 was activated"
+    )
 
     # Cleanup
     client.delete(f"/api/admin/prompts/{p1['id']}")
@@ -550,7 +732,9 @@ def test_admin_update_user_role_valid(seeded_client):
 
     # Ensure user doc exists (create is idempotent if we use a unique uid)
     try:
-        users_repo.create(uid="target-uid", email="t@t.com", display_name="Target", role="user")
+        users_repo.create(
+            uid="target-uid", email="t@t.com", display_name="Target", role="user"
+        )
     except Exception:
         pass  # already exists from a previous run against the same emulator session
 
@@ -568,7 +752,9 @@ def test_admin_disable_user(seeded_client):
     from app.db import users as users_repo
 
     try:
-        users_repo.create(uid="disable-uid", email="d@d.com", display_name="Disable Me", role="user")
+        users_repo.create(
+            uid="disable-uid", email="d@d.com", display_name="Disable Me", role="user"
+        )
     except Exception:
         pass  # already exists
 
@@ -582,12 +768,23 @@ def test_admin_disable_user(seeded_client):
 # ---------------------------------------------------------------------------
 
 
-def test_admin_endpoint_rejects_non_admin(emulator_project):  # noqa: ARG001
+def test_admin_endpoint_rejects_non_admin(emulator_project):
+    _ = emulator_project
     from app.app_utils.expose_app import app
     from app.auth.dependencies import get_current_user, require_admin
 
-    fake_non_admin = {"uid": "regular-user", "email": "u@u.com", "role": "user", "disabled": False}
-    fake_admin = {"uid": "test-admin", "email": "admin@test.com", "role": "admin", "disabled": False}
+    fake_non_admin = {
+        "uid": "regular-user",
+        "email": "u@u.com",
+        "role": "user",
+        "disabled": False,
+    }
+    fake_admin = {
+        "uid": "test-admin",
+        "email": "admin@test.com",
+        "role": "admin",
+        "disabled": False,
+    }
 
     # Snapshot current overrides so we can restore them in finally
     saved_overrides = dict(app.dependency_overrides)

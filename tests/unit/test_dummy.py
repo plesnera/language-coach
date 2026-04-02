@@ -19,6 +19,7 @@ Unit tests for core modules.
 def test_db_client_module_importable() -> None:
     """Verify the Firestore client module can be imported."""
     from app.db import client
+
     assert hasattr(client, "get_firestore_client")
 
 

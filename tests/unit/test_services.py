@@ -191,5 +191,14 @@ def test_all_api_routers_importable() -> None:
     )
     from app.auth import router as auth_router_mod
 
-    for mod in [admin, conversations, courses, documents, languages, progress, topics, auth_router_mod]:
+    for mod in [
+        admin,
+        conversations,
+        courses,
+        documents,
+        languages,
+        progress,
+        topics,
+        auth_router_mod,
+    ]:
         assert hasattr(mod, "router")

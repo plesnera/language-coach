@@ -115,7 +115,9 @@ def seed_defaults() -> None:
                 "Gently correct mistakes and provide the Spanish translation when "
                 "the user struggles."
             ),
-            "image_url": get_or_upload_seed_image("375bb32ff0164c3d9923b0b5328ad995.jpg"),
+            "image_url": get_or_upload_seed_image(
+                "375bb32ff0164c3d9923b0b5328ad995.jpg"
+            ),
             "sort_order": 1,
         },
         {
@@ -125,10 +127,12 @@ def seed_defaults() -> None:
                 "You are a Spanish conversation partner. Guide the conversation "
                 "around the user's family. Ask about family members, their names, "
                 "ages, occupations, and personalities. Help the user practice "
-                "possessive adjectives, descriptive adjectives, and the verbs "
-                "ser/estar. Gently correct mistakes."
+                "possessive adjectives, descriptive adjectives, and verbs for "
+                "identity and state. Gently correct mistakes."
             ),
-            "image_url": get_or_upload_seed_image("2ecdf8f52bf84707bc11242a6a5bf02f.jpg"),
+            "image_url": get_or_upload_seed_image(
+                "2ecdf8f52bf84707bc11242a6a5bf02f.jpg"
+            ),
             "sort_order": 2,
         },
         {
@@ -142,7 +146,9 @@ def seed_defaults() -> None:
                 "professions, daily routine verbs, and time expressions. "
                 "Gently correct mistakes."
             ),
-            "image_url": get_or_upload_seed_image("75ddbd3b5d8c410180ffcf146c7360dc.jpg"),
+            "image_url": get_or_upload_seed_image(
+                "75ddbd3b5d8c410180ffcf146c7360dc.jpg"
+            ),
             "sort_order": 3,
         },
     ]

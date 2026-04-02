@@ -308,7 +308,7 @@ def deploy_agent_engine_app(
     # Set deployment-specific environment variables
     env_vars["GOOGLE_CLOUD_REGION"] = location
     env_vars["NUM_WORKERS"] = str(num_workers)
-    
+
     # Supply images bucket dynamically matching terraform naming spec
     # The default project layout is handled by the terraform templates usually being the active project id
     if "IMAGES_BUCKET_NAME" not in env_vars:
