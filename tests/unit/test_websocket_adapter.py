@@ -40,7 +40,32 @@ async def test_receive_puts_valid_messages_on_queue(
     await adapter.receive_from_client()
     assert not adapter.input_queue.empty()
     queued = adapter.input_queue.get_nowait()
-    assert queued == msg
+    assert queued["content"] == msg["content"]
+    assert queued["user_id"] == "default_user"
+
+
+@pytest.mark.asyncio
+async def test_receive_uses_setup_user_id_for_first_forwarded_message(
+    adapter: WebSocketToQueueAdapter, mock_websocket: AsyncMock
+) -> None:
+    """If setup includes user_id, first forwarded request should use it."""
+    setup_msg = {
+        "user_id": "guest-abc",
+        "setup": {"run_id": "run-1", "user_id": "guest-abc"},
+    }
+    user_msg = {"content": {"role": "user", "parts": [{"text": "Hola"}]}}
+    mock_websocket.receive = AsyncMock(
+        side_effect=[
+            {"text": json.dumps(setup_msg)},
+            {"text": json.dumps(user_msg)},
+            Exception("done"),
+        ]
+    )
+    await adapter.receive_from_client()
+    assert not adapter.input_queue.empty()
+    queued = adapter.input_queue.get_nowait()
+    assert queued["content"] == user_msg["content"]
+    assert queued["user_id"] == "guest-abc"
 
 
 @pytest.mark.asyncio

@@ -20,7 +20,7 @@ import os
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.auth.dependencies import require_admin
 from app.db import courses as courses_repo
@@ -29,6 +29,7 @@ from app.db import languages as lang_repo
 from app.db import system_prompts as prompts_repo
 from app.db import topics as topics_repo
 from app.db import users as users_repo
+from app.services.lesson_builder_ai import generate_lesson_draft, refine_lesson_draft
 
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)]
@@ -113,6 +114,12 @@ class CreateLessonRequest(BaseModel):
     source_audio_ref: str | None = None
     source_transcript: str | None = None
     image_url: str | None = None
+    prompt_version: int | None = None
+    prompt_last_edited_by: str | None = None
+    prompt_source_type: str | None = None
+    prompt_design_notes: str | None = None
+    visual_aids: list[dict[str, Any]] | None = None
+    ai_generation_context: dict[str, Any] | None = None
 
 
 @router.post("/courses/{course_id}/lessons", status_code=201)
@@ -160,6 +167,12 @@ class UpdateLessonRequest(BaseModel):
     source_audio_ref: str | None = None
     source_transcript: str | None = None
     image_url: str | None = None
+    prompt_version: int | None = None
+    prompt_last_edited_by: str | None = None
+    prompt_source_type: str | None = None
+    prompt_design_notes: str | None = None
+    visual_aids: list[dict[str, Any]] | None = None
+    ai_generation_context: dict[str, Any] | None = None
 
 
 @router.put("/courses/{course_id}/lessons/{lesson_id}")
@@ -177,6 +190,57 @@ def update_lesson(
 def delete_lesson(course_id: str, lesson_id: str) -> None:
     if not courses_repo.delete_lesson(course_id, lesson_id):
         raise HTTPException(404, "Lesson not found")
+
+
+class LessonAIDraftRequest(BaseModel):
+    source_content: str
+    language_id: str = "es"
+    learner_level: str = "beginner"
+    lesson_length_minutes: int = 10
+    focus_skills: list[str] = Field(default_factory=lambda: ["speaking"])
+    constraints: str | None = None
+
+
+@router.post("/lessons/ai/draft")
+def create_lesson_ai_draft(body: LessonAIDraftRequest) -> dict[str, Any]:
+    source_content = body.source_content.strip()
+    if not source_content:
+        raise HTTPException(422, "source_content cannot be empty")
+    if len(source_content) > 30_000:
+        raise HTTPException(422, "source_content exceeds maximum size")
+    if body.lesson_length_minutes <= 0 or body.lesson_length_minutes > 180:
+        raise HTTPException(422, "lesson_length_minutes must be between 1 and 180")
+    parsed_focus_skills = [skill.strip() for skill in body.focus_skills if skill.strip()]
+    if len(parsed_focus_skills) == 0:
+        raise HTTPException(422, "focus_skills must include at least one skill")
+    return generate_lesson_draft(
+        source_content=source_content,
+        language_id=body.language_id.strip() or "es",
+        learner_level=body.learner_level.strip() or "beginner",
+        lesson_length_minutes=body.lesson_length_minutes,
+        focus_skills=parsed_focus_skills,
+        constraints=(body.constraints or "").strip() or None,
+    )
+
+
+class LessonAIRefineRequest(BaseModel):
+    current_draft: dict[str, Any]
+    admin_instruction: str
+    conversation_summary: str | None = None
+
+
+@router.post("/lessons/ai/refine")
+def refine_lesson_ai_draft(body: LessonAIRefineRequest) -> dict[str, Any]:
+    instruction = body.admin_instruction.strip()
+    if not instruction:
+        raise HTTPException(422, "admin_instruction cannot be empty")
+    if len(instruction) > 5_000:
+        raise HTTPException(422, "admin_instruction exceeds maximum size")
+    return refine_lesson_draft(
+        current_draft=body.current_draft,
+        admin_instruction=instruction,
+        conversation_summary=(body.conversation_summary or "").strip() or None,
+    )
 
 
 # ── Topics ──────────────────────────────────────────────────────────────────

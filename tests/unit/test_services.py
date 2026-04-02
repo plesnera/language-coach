@@ -94,6 +94,62 @@ def test_summarise_local_dev() -> None:
     assert "LOCAL_DEV" in result
 
 
+# ── AI Lesson Builder ───────────────────────────────────────────────────────
+
+
+def test_generate_lesson_draft_local_dev() -> None:
+    from app.services.lesson_builder_ai import generate_lesson_draft
+
+    result = generate_lesson_draft(
+        source_content="A short source text about travel conversations.",
+        language_id="es",
+        learner_level="beginner",
+        lesson_length_minutes=10,
+        focus_skills=["speaking", "listening"],
+        constraints="Keep turns short",
+    )
+
+    assert result["title"] == "AI Draft Lesson"
+    assert "guided dialogue" in result["objective"]
+    assert "patient language coach" in result["teaching_prompt"]
+    assert result["ai_generation_context"]["language_id"] == "es"
+    assert result["ai_generation_context"]["learner_level"] == "beginner"
+    assert result["ai_generation_context"]["lesson_length_minutes"] == 10
+    assert result["ai_generation_context"]["focus_skills"] == ["speaking", "listening"]
+    assert result["ai_generation_context"]["constraints"] == "Keep turns short"
+
+
+def test_refine_lesson_draft_local_dev_normalizes_visual_aids() -> None:
+    from app.services.lesson_builder_ai import refine_lesson_draft
+
+    current_draft = {
+        "title": "Lesson title",
+        "objective": "Original objective",
+        "teaching_prompt": "Original prompt",
+        "prompt_design_notes": "Original notes",
+        "visual_aids": [
+            {"type": "invalid", "title": "Bad", "description": "Bad", "data": {}}
+        ],
+        "ai_generation_context": {
+            "language_id": "es",
+            "learner_level": "beginner",
+            "lesson_length_minutes": 8,
+            "focus_skills": ["speaking"],
+            "constraints": None,
+        },
+    }
+
+    result = refine_lesson_draft(
+        current_draft=current_draft,
+        admin_instruction="Add more role-play prompts",
+        conversation_summary="Initial version generated.",
+    )
+
+    assert "Refined:" in result["objective"]
+    assert result["visual_aids"] == []
+    assert result["ai_generation_context"]["lesson_length_minutes"] == 8
+
+
 # ── DB Repos (with in-memory store) ─────────────────────────────────────────
 
 

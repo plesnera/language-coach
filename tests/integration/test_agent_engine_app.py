@@ -15,6 +15,7 @@
 import asyncio
 import json
 import logging
+import os
 import subprocess
 import sys
 import threading
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 WS_URL = "ws://127.0.0.1:8000/ws"
 FEEDBACK_URL = "http://127.0.0.1:8000/feedback"
+_LOCAL_DEV = os.environ.get("LOCAL_DEV", "").lower() in ("1", "true", "yes")
 
 
 def log_output(pipe: Any, log_func: Any) -> None:
@@ -113,6 +115,10 @@ def server_fixture(request: Any) -> Iterator[subprocess.Popen[str]]:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    _LOCAL_DEV,
+    reason="Live Gemini streaming responses are not guaranteed in LOCAL_DEV",
+)
 async def test_websocket_audio_input(server_fixture: subprocess.Popen[str]) -> None:
     """Test websocket with audio input in local mode."""
 

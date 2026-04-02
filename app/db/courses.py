@@ -19,6 +19,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from google.cloud import firestore
 from google.cloud.firestore_v1.base_document import DocumentSnapshot
 
 from app.db.client import get_firestore_client
@@ -47,7 +48,7 @@ def list_by_language(language_id: str) -> list[dict[str, Any]]:
     db = get_firestore_client()
     docs = (
         db.collection(COLLECTION)
-        .where("language_id", "==", language_id)
+        .where(filter=firestore.FieldFilter("language_id", "==", language_id))
         .order_by("sort_order")
         .stream()
     )
@@ -130,6 +131,12 @@ def create_lesson(
     source_audio_ref: str | None = None,
     source_transcript: str | None = None,
     image_url: str | None = None,
+    prompt_version: int | None = None,
+    prompt_last_edited_by: str | None = None,
+    prompt_source_type: str | None = None,
+    prompt_design_notes: str | None = None,
+    visual_aids: list[dict[str, Any]] | None = None,
+    ai_generation_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     db = get_firestore_client()
     now = datetime.now(timezone.utc)
@@ -141,6 +148,12 @@ def create_lesson(
         "source_audio_ref": source_audio_ref,
         "source_transcript": source_transcript,
         "image_url": image_url,
+        "prompt_version": prompt_version,
+        "prompt_last_edited_by": prompt_last_edited_by,
+        "prompt_source_type": prompt_source_type,
+        "prompt_design_notes": prompt_design_notes,
+        "visual_aids": visual_aids or [],
+        "ai_generation_context": ai_generation_context,
         "created_at": now,
         "updated_at": now,
     }

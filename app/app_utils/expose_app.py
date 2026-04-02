@@ -91,7 +91,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             if prompts_repo.get_active("es", prompt_type) is None:
                 logging.warning(
                     "No active system prompt found for type '%s'. "
-                    "Agent will use fallback text. Visit /admin/prompts to configure.",
+                    "Create one in /admin/prompts before starting agent sessions.",
                     prompt_type,
                 )
     except Exception:
@@ -205,6 +205,7 @@ class WebSocketToQueueAdapter:
         self.remote_config = remote_config
         self.input_queue: asyncio.Queue[dict] = asyncio.Queue()
         self.first_message = True
+        self.user_id: str | None = None
 
     def _transform_remote_agent_engine_response(self, response: dict) -> dict:
         """Transform remote Agent Engine bidiStreamOutput to ADK Event format for frontend."""
@@ -217,6 +218,32 @@ class WebSocketToQueueAdapter:
         # Transform to ADK Event format that frontend already handles
         # Just unwrap the bidiStreamOutput wrapper - the content is already in ADK Event format
         return bidi_output
+
+    def _capture_setup_context(self, setup_message: dict[str, Any]) -> None:
+        """Extract and store connection-scoped context from the setup payload."""
+        setup_payload = setup_message.get("setup")
+        setup_user_id = (
+            setup_payload.get("user_id")
+            if isinstance(setup_payload, dict)
+            else None
+        )
+        incoming_user_id = setup_message.get("user_id") or setup_user_id
+        if incoming_user_id:
+            self.user_id = str(incoming_user_id)
+
+    def _prepare_live_request(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Ensure the first forwarded request includes a user_id."""
+        prepared = dict(payload)
+        if self.first_message:
+            if "user_id" not in prepared and self.user_id:
+                prepared["user_id"] = self.user_id
+            if "user_id" not in prepared:
+                prepared["user_id"] = "default_user"
+                logging.warning(
+                    "No user_id found in setup/first request; using default_user"
+                )
+            self.first_message = False
+        return prepared
 
     async def receive_from_client(self) -> None:
         """Listen for messages from the client and put them in the queue."""
@@ -233,9 +260,18 @@ class WebSocketToQueueAdapter:
                     if isinstance(data, dict):
                         # Skip setup messages - they're for backend logging only, not valid LiveRequest format
                         if "setup" in data:
+                            self._capture_setup_context(data)
+                            setup_payload = (
+                                data["setup"] if isinstance(data["setup"], dict) else {}
+                            )
                             # Log setup information
                             logger.log_struct(
-                                {**data["setup"], "type": "setup"}, severity="INFO"
+                                {
+                                    **setup_payload,
+                                    "user_id": self.user_id,
+                                    "type": "setup",
+                                },
+                                severity="INFO",
                             )
                             logging.info(
                                 "Received setup message (not forwarding to agent)"
@@ -243,7 +279,7 @@ class WebSocketToQueueAdapter:
                             continue
 
                         # Frontend handles message format for both modes
-                        await self.input_queue.put(data)
+                        await self.input_queue.put(self._prepare_live_request(data))
                     else:
                         logging.warning(
                             f"Received unexpected JSON structure from client: {data}"
@@ -252,7 +288,9 @@ class WebSocketToQueueAdapter:
                 elif "bytes" in message:
                     # Handle binary data
                     # Convert binary to appropriate format for agent engine
-                    await self.input_queue.put({"binary_data": message["bytes"]})
+                    await self.input_queue.put(
+                        self._prepare_live_request({"binary_data": message["bytes"]})
+                    )
 
                 else:
                     logging.warning(

@@ -17,20 +17,17 @@
 from __future__ import annotations
 
 from google.adk.agents import Agent
-from google.adk.models import Gemini
 from google.genai import types
 
 from app.agents.prompt_loader import load_prompt
-
-# Minimal fallback — only used when Firestore is completely unreachable.
-_BEGINNER_FALLBACK = "You are a patient Spanish teacher for complete beginners."
+from app.agents.safe_gemini import SafeGemini
 
 
 def create_beginner_agent(language_id: str = "es") -> Agent:
-    instruction = load_prompt(language_id, "beginner", _BEGINNER_FALLBACK)
+    instruction = load_prompt(language_id, "beginner")
     return Agent(
         name="beginner_agent",
-        model=Gemini(
+        model=SafeGemini(
             model="gemini-live-2.5-flash-native-audio",
             retry_options=types.HttpRetryOptions(attempts=3),
         ),

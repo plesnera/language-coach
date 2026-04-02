@@ -19,6 +19,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from google.cloud import firestore
 from google.cloud.firestore_v1.base_document import DocumentSnapshot
 
 from app.db.client import get_firestore_client
@@ -43,7 +44,11 @@ def get(language_id: str) -> dict[str, Any] | None:
 def list_enabled() -> list[dict[str, Any]]:
     """Return all enabled languages."""
     db = get_firestore_client()
-    docs = db.collection(COLLECTION).where("enabled", "==", True).stream()
+    docs = (
+        db.collection(COLLECTION)
+        .where(filter=firestore.FieldFilter("enabled", "==", True))
+        .stream()
+    )
     return [d for doc in docs if (d := _doc_to_dict(doc)) is not None]
 
 

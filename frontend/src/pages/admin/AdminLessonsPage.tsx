@@ -33,6 +33,12 @@ interface Lesson {
   source_audio_ref: string | null;
   source_transcript: string | null;
   image_url: string | null;
+  prompt_version?: number | null;
+  prompt_last_edited_by?: string | null;
+  prompt_source_type?: 'manual' | 'ai-assisted' | null;
+  prompt_design_notes?: string | null;
+  visual_aids?: Array<Record<string, unknown>> | null;
+  ai_generation_context?: Record<string, unknown> | null;
 }
 
 interface LibraryImage {
@@ -40,6 +46,21 @@ interface LibraryImage {
   filename: string;
   url: string;
   original_name: string;
+}
+
+interface AILessonDraft {
+  title: string;
+  objective: string;
+  teaching_prompt: string;
+  prompt_design_notes: string;
+  visual_aids: Array<Record<string, unknown>>;
+  ai_generation_context: {
+    language_id: string;
+    learner_level: string;
+    lesson_length_minutes: number;
+    focus_skills: string[];
+    constraints: string | null;
+  };
 }
 
 export function AdminLessonsPage() {
@@ -64,6 +85,18 @@ export function AdminLessonsPage() {
   const [reorderError, setReorderError] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
+  const [aiSourceContent, setAiSourceContent] = useState('');
+  const [aiLearnerLevel, setAiLearnerLevel] = useState('beginner');
+  const [aiLanguageId, setAiLanguageId] = useState('es');
+  const [aiLessonLength, setAiLessonLength] = useState(10);
+  const [aiFocusSkillsText, setAiFocusSkillsText] = useState('speaking, listening');
+  const [aiConstraints, setAiConstraints] = useState('');
+  const [aiDraft, setAiDraft] = useState<AILessonDraft | null>(null);
+  const [aiInstruction, setAiInstruction] = useState('');
+  const [aiHistory, setAiHistory] = useState<string[]>([]);
+  const [isDrafting, setIsDrafting] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // ---- Load lessons ----
   const loadLessons = useCallback(async () => {
@@ -124,6 +157,16 @@ export function AdminLessonsPage() {
   const handleOpenModal = (lesson?: Lesson) => {
     setCurrentLesson(lesson ? { ...lesson } : {});
     setShowLibrary(false);
+    setAiSourceContent('');
+    setAiLearnerLevel('beginner');
+    setAiLanguageId('es');
+    setAiLessonLength(10);
+    setAiFocusSkillsText('speaking, listening');
+    setAiConstraints('');
+    setAiDraft(null);
+    setAiInstruction('');
+    setAiHistory([]);
+    setAiError(null);
     loadImageLibrary();
     setIsModalOpen(true);
   };
@@ -131,6 +174,125 @@ export function AdminLessonsPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setCurrentLesson({});
+  };
+
+  const parseFocusSkills = (value: string) =>
+    value
+      .split(',')
+      .map((skill) => skill.trim())
+      .filter(Boolean);
+
+  const handleSourceFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.txt') || name.endsWith('.md')) {
+      const text = await file.text();
+      setAiSourceContent(text.slice(0, 30000));
+      e.target.value = '';
+      return;
+    }
+    if (name.endsWith('.pdf')) {
+      setAiError('PDF upload is supported as a reference, but please paste extracted text for best results.');
+      setAiSourceContent((prev) =>
+        prev
+          ? prev
+          : `[PDF uploaded: ${file.name}] Please paste extracted text content below.`,
+      );
+    } else {
+      setAiError('Unsupported file type. Use TXT, MD, or PDF.');
+    }
+    e.target.value = '';
+  };
+
+  const handleGenerateDraft = async () => {
+    setAiError(null);
+    if (!aiSourceContent.trim()) {
+      setAiError('Add source content before generating a draft.');
+      return;
+    }
+    setIsDrafting(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/lessons/ai/draft`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          source_content: aiSourceContent,
+          language_id: aiLanguageId,
+          learner_level: aiLearnerLevel,
+          lesson_length_minutes: aiLessonLength,
+          focus_skills: parseFocusSkills(aiFocusSkillsText),
+          constraints: aiConstraints || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setAiError(data?.detail || 'Could not generate draft.');
+        return;
+      }
+      const data: AILessonDraft = await res.json();
+      setAiDraft(data);
+      setAiHistory((prev) => [...prev, 'Generated initial draft']);
+    } catch {
+      setAiError('Could not generate draft.');
+    } finally {
+      setIsDrafting(false);
+    }
+  };
+
+  const handleRefineDraft = async () => {
+    setAiError(null);
+    if (!aiDraft) {
+      setAiError('Generate a draft first.');
+      return;
+    }
+    if (!aiInstruction.trim()) {
+      setAiError('Add an instruction to refine the draft.');
+      return;
+    }
+    setIsRefining(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/lessons/ai/refine`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          current_draft: aiDraft,
+          admin_instruction: aiInstruction,
+          conversation_summary: aiHistory.join('\n'),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setAiError(data?.detail || 'Could not refine draft.');
+        return;
+      }
+      const data: AILessonDraft = await res.json();
+      setAiDraft(data);
+      setAiHistory((prev) => [...prev, `Instruction: ${aiInstruction.trim()}`]);
+      setAiInstruction('');
+    } catch {
+      setAiError('Could not refine draft.');
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  const applyDraftToLesson = () => {
+    if (!aiDraft) return;
+    setCurrentLesson((prev) => ({
+      ...prev,
+      title: aiDraft.title || prev.title || '',
+      objective: aiDraft.objective || prev.objective || '',
+      teaching_prompt: aiDraft.teaching_prompt || prev.teaching_prompt || '',
+      prompt_design_notes: aiDraft.prompt_design_notes || '',
+      prompt_source_type: 'ai-assisted',
+      visual_aids: aiDraft.visual_aids || [],
+      ai_generation_context: aiDraft.ai_generation_context || null,
+      prompt_version: Number(prev.prompt_version || 0) + 1,
+      prompt_last_edited_by: user?.email || user?.uid || null,
+    }));
   };
 
   const handleSave = async () => {
@@ -149,6 +311,12 @@ export function AdminLessonsPage() {
               source_audio_ref: currentLesson.source_audio_ref,
               source_transcript: currentLesson.source_transcript,
               image_url: currentLesson.image_url,
+              prompt_version: currentLesson.prompt_version ?? null,
+              prompt_last_edited_by: currentLesson.prompt_last_edited_by ?? null,
+              prompt_source_type: currentLesson.prompt_source_type ?? 'manual',
+              prompt_design_notes: currentLesson.prompt_design_notes ?? null,
+              visual_aids: currentLesson.visual_aids ?? [],
+              ai_generation_context: currentLesson.ai_generation_context ?? null,
             }),
           },
         );
@@ -164,6 +332,12 @@ export function AdminLessonsPage() {
             source_audio_ref: currentLesson.source_audio_ref || null,
             source_transcript: currentLesson.source_transcript || null,
             image_url: currentLesson.image_url || null,
+            prompt_version: currentLesson.prompt_version ?? 1,
+            prompt_last_edited_by: currentLesson.prompt_last_edited_by ?? user?.email ?? user?.uid ?? null,
+            prompt_source_type: currentLesson.prompt_source_type ?? 'manual',
+            prompt_design_notes: currentLesson.prompt_design_notes ?? null,
+            visual_aids: currentLesson.visual_aids ?? [],
+            ai_generation_context: currentLesson.ai_generation_context ?? null,
           }),
         });
       }
@@ -512,6 +686,110 @@ export function AdminLessonsPage() {
                 <h3 className="font-heading font-bold text-lg mb-4 flex items-center gap-2">
                   <Wand2 size={20} className="text-[#F59E0B]" /> AI Coach Configuration
                 </h3>
+                <div className="mb-6 p-4 border-2 border-[#1A1A1A] hand-drawn-border-alt bg-[#FAFAF8]">
+                  <h4 className="font-heading font-bold text-base mb-3">AI Assist Lesson Builder</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-bold mb-1">Source Content</label>
+                      <textarea
+                        className="w-full bg-white border-2 border-[#1A1A1A] hand-drawn-border-alt px-3 py-2 text-sm"
+                        rows={4}
+                        value={aiSourceContent}
+                        onChange={(e) => setAiSourceContent(e.target.value)}
+                        placeholder="Paste source material for this lesson design..."
+                      />
+                      <label className="inline-flex items-center gap-1 mt-2 text-xs font-bold px-3 py-1.5 border-2 border-[#1A1A1A] hand-drawn-border-alt cursor-pointer hover:bg-gray-100 transition-colors">
+                        <Upload size={14} /> Upload TXT/MD/PDF
+                        <input
+                          type="file"
+                          accept=".txt,.md,.pdf"
+                          onChange={handleSourceFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <HandDrawnInput
+                        label="Language ID"
+                        value={aiLanguageId}
+                        onChange={(e) => setAiLanguageId(e.target.value)}
+                        placeholder="es"
+                      />
+                      <HandDrawnInput
+                        label="Learner Level"
+                        value={aiLearnerLevel}
+                        onChange={(e) => setAiLearnerLevel(e.target.value)}
+                        placeholder="beginner"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <HandDrawnInput
+                        label="Lesson Length (minutes)"
+                        type="number"
+                        value={String(aiLessonLength)}
+                        onChange={(e) => setAiLessonLength(Number(e.target.value || 10))}
+                        placeholder="10"
+                      />
+                      <HandDrawnInput
+                        label="Focus Skills (comma separated)"
+                        value={aiFocusSkillsText}
+                        onChange={(e) => setAiFocusSkillsText(e.target.value)}
+                        placeholder="speaking, listening"
+                      />
+                    </div>
+                    <HandDrawnInput
+                      label="Constraints (optional)"
+                      value={aiConstraints}
+                      onChange={(e) => setAiConstraints(e.target.value)}
+                      placeholder="Keep vocabulary A1, include roleplay"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <HandDrawnButton
+                        variant="outline"
+                        onClick={handleGenerateDraft}
+                        disabled={isDrafting}
+                      >
+                        {isDrafting ? 'Generating…' : 'Generate Draft'}
+                      </HandDrawnButton>
+                      <HandDrawnButton
+                        variant="outline"
+                        onClick={applyDraftToLesson}
+                        disabled={!aiDraft}
+                      >
+                        Apply Draft to Lesson
+                      </HandDrawnButton>
+                    </div>
+                    {aiDraft && (
+                      <div className="mt-2 p-3 border-2 border-dashed border-gray-300 hand-drawn-border-alt bg-white">
+                        <p className="text-xs text-gray-500 mb-1">Current AI Draft</p>
+                        <p className="text-sm font-bold">{aiDraft.title || '(Untitled)'}</p>
+                        <p className="text-xs text-gray-600 mt-1 line-clamp-3">{aiDraft.objective}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-sm font-bold mb-1">Refine Instruction</label>
+                      <textarea
+                        className="w-full bg-white border-2 border-[#1A1A1A] hand-drawn-border-alt px-3 py-2 text-sm"
+                        rows={2}
+                        value={aiInstruction}
+                        onChange={(e) => setAiInstruction(e.target.value)}
+                        placeholder="e.g., simplify grammar and add more speaking drills"
+                      />
+                      <div className="mt-2">
+                        <HandDrawnButton
+                          variant="outline"
+                          onClick={handleRefineDraft}
+                          disabled={isRefining || !aiDraft}
+                        >
+                          {isRefining ? 'Refining…' : 'Refine Draft'}
+                        </HandDrawnButton>
+                      </div>
+                    </div>
+                    {aiError && (
+                      <p className="text-xs text-[#DC2626] font-medium">{aiError}</p>
+                    )}
+                  </div>
+                </div>
                 <HandDrawnInput
                   label="Teaching Prompt (System Prompt)"
                   multiline

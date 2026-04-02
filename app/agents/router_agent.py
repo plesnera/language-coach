@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from google.adk.agents import Agent
 from google.adk.apps import App
-from google.adk.models import Gemini
 from google.genai import types
 
 # Ensure environment is bootstrapped before creating agents.
@@ -26,13 +25,8 @@ import app.agents.setup
 from app.agents.beginner_agent import create_beginner_agent
 from app.agents.freestyle_agent import create_freestyle_agent
 from app.agents.prompt_loader import load_prompt
+from app.agents.safe_gemini import SafeGemini
 from app.agents.topic_agent import create_topic_agent
-
-# Minimal fallback — only used when Firestore is completely unreachable.
-_ROUTER_FALLBACK = (
-    "You are the Language Coach routing agent. Greet the user and ask what "
-    "they would like to do: beginner lessons, topic conversation, or free-talk."
-)
 
 # Create sub-agents (default language = Spanish).
 _beginner = create_beginner_agent("es")
@@ -41,11 +35,11 @@ _freestyle = create_freestyle_agent("es")
 
 root_agent = Agent(
     name="root_agent",
-    model=Gemini(
+    model=SafeGemini(
         model="gemini-live-2.5-flash-native-audio",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
-    instruction=load_prompt("es", "router", _ROUTER_FALLBACK),
+    instruction=load_prompt("es", "router"),
     sub_agents=[_beginner, _topic, _freestyle],
 )
 

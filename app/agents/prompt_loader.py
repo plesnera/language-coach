@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Load system prompts from Firestore with a hardcoded fallback."""
+"""Load system prompts from Firestore."""
 
 from __future__ import annotations
 
@@ -20,12 +20,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def load_prompt(language_id: str, prompt_type: str) -> str:
+    """Return the active prompt for ``language_id`` / ``prompt_type``.
 
-def load_prompt(language_id: str, prompt_type: str, default: str) -> str:
-    """Return the active prompt for *language_id* / *prompt_type*.
-
-    Falls back to *default* if Firestore is unreachable or no active
-    prompt has been configured yet.
+    If no active prompt exists, defaults are seeded and the lookup is retried.
+    Raises ``RuntimeError`` when no prompt can be resolved.
     """
     try:
         from app.db import system_prompts as prompts_repo
@@ -33,11 +32,22 @@ def load_prompt(language_id: str, prompt_type: str, default: str) -> str:
         active = prompts_repo.get_active(language_id, prompt_type)
         if active is not None:
             return active["prompt_text"]
-    except Exception:
-        logger.warning(
-            "Could not load prompt from Firestore for %s/%s — using default",
+        logger.info(
+            "No active system prompt found for %s/%s — seeding defaults and retrying",
             language_id,
             prompt_type,
-            exc_info=True,
         )
-    return default
+        prompts_repo.seed_defaults()
+        active = prompts_repo.get_active(language_id, prompt_type)
+        if active is not None:
+            return active["prompt_text"]
+    except Exception as exc:
+        logger.exception(
+            "Could not load prompt from Firestore for %s/%s",
+            language_id,
+            prompt_type,
+        )
+        raise RuntimeError(
+            f"Missing active system prompt for {language_id}/{prompt_type}"
+        ) from exc
+    raise RuntimeError(f"Missing active system prompt for {language_id}/{prompt_type}")

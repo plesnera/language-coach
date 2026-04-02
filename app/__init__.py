@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .agents.router_agent import app
 
 __all__ = ["app"]
+
+
+def __getattr__(name: str):
+    if name == "app":
+        from .agents.router_agent import app as router_app
+
+        return router_app
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

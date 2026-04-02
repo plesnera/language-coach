@@ -584,6 +584,234 @@ def test_admin_lessons_reorder_duplicate_ids_returns_400(seeded_client):
 
     client.delete(f"/api/admin/courses/{cid}")
 
+# ---------------------------------------------------------------------------
+# Admin — Lessons AI Assist + Prompt Metadata
+# ---------------------------------------------------------------------------
+
+
+def test_admin_lessons_metadata_roundtrip(seeded_client):
+    client, _, _ = seeded_client
+
+    course = client.post(
+        "/api/admin/courses",
+        json={
+            "title": "Metadata Course",
+            "description": "D",
+            "language_id": "es",
+        },
+    ).json()
+    cid = course["id"]
+
+    created = client.post(
+        f"/api/admin/courses/{cid}/lessons",
+        json={
+            "title": "Lesson with metadata",
+            "objective": "Objective",
+            "teaching_prompt": "Prompt",
+            "sort_order": 0,
+            "prompt_version": 1,
+            "prompt_last_edited_by": "admin@test.com",
+            "prompt_source_type": "ai-assisted",
+            "prompt_design_notes": "Initial AI draft",
+            "visual_aids": [
+                {
+                    "type": "table",
+                    "title": "Conjugation",
+                    "description": "Simple present",
+                    "data": {
+                        "columns": ["yo", "tú"],
+                        "rows": [{"yo": "hablo", "tú": "hablas"}],
+                    },
+                }
+            ],
+            "ai_generation_context": {
+                "language_id": "es",
+                "learner_level": "beginner",
+                "lesson_length_minutes": 12,
+                "focus_skills": ["speaking", "grammar"],
+                "constraints": "Keep examples short",
+            },
+        },
+    )
+    assert created.status_code == 201
+    lesson = created.json()
+    lid = lesson["id"]
+    assert lesson["prompt_version"] == 1
+    assert lesson["prompt_source_type"] == "ai-assisted"
+    assert lesson["prompt_last_edited_by"] == "admin@test.com"
+    assert lesson["visual_aids"][0]["type"] == "table"
+    assert lesson["ai_generation_context"]["learner_level"] == "beginner"
+
+    updated = client.put(
+        f"/api/admin/courses/{cid}/lessons/{lid}",
+        json={
+            "prompt_version": 2,
+            "prompt_design_notes": "Refined by admin",
+            "visual_aids": [
+                {
+                    "type": "diagram",
+                    "title": "Sentence map",
+                    "description": "Word order guide",
+                    "data": {"image_url": "/uploads/images/diagram.png"},
+                }
+            ],
+        },
+    )
+    assert updated.status_code == 200
+    updated_json = updated.json()
+    assert updated_json["prompt_version"] == 2
+    assert updated_json["prompt_design_notes"] == "Refined by admin"
+    assert updated_json["visual_aids"][0]["type"] == "diagram"
+
+    listed = client.get(f"/api/admin/courses/{cid}/lessons")
+    assert listed.status_code == 200
+    saved = next((item for item in listed.json() if item["id"] == lid), None)
+    assert saved is not None
+    assert saved["prompt_version"] == 2
+    assert saved["prompt_source_type"] == "ai-assisted"
+    assert saved["ai_generation_context"]["lesson_length_minutes"] == 12
+
+    client.delete(f"/api/admin/courses/{cid}")
+
+
+def test_admin_lessons_ai_draft_endpoint_success(seeded_client):
+    client, _, _ = seeded_client
+    mocked = {
+        "title": "Draft lesson",
+        "objective": "Practice short dialogues.",
+        "teaching_prompt": "System prompt text",
+        "prompt_design_notes": "AI-generated",
+        "visual_aids": [],
+        "ai_generation_context": {
+            "language_id": "es",
+            "learner_level": "beginner",
+            "lesson_length_minutes": 15,
+            "focus_skills": ["speaking"],
+            "constraints": "Use A1 vocabulary",
+        },
+    }
+
+    with patch("app.api.admin.generate_lesson_draft", return_value=mocked) as mock_gen:
+        resp = client.post(
+            "/api/admin/lessons/ai/draft",
+            json={
+                "source_content": "  Source text here.  ",
+                "language_id": " es ",
+                "learner_level": " beginner ",
+                "lesson_length_minutes": 15,
+                "focus_skills": [" speaking ", "  "],
+                "constraints": " Use A1 vocabulary ",
+            },
+        )
+
+    assert resp.status_code == 200
+    assert resp.json()["title"] == "Draft lesson"
+    kwargs = mock_gen.call_args.kwargs
+    assert kwargs["source_content"] == "Source text here."
+    assert kwargs["language_id"] == "es"
+    assert kwargs["learner_level"] == "beginner"
+    assert kwargs["focus_skills"] == ["speaking"]
+    assert kwargs["constraints"] == "Use A1 vocabulary"
+
+
+@pytest.mark.parametrize(
+    ("body", "error_detail"),
+    [
+        (
+            {
+                "source_content": "   ",
+                "language_id": "es",
+                "learner_level": "beginner",
+                "lesson_length_minutes": 10,
+                "focus_skills": ["speaking"],
+            },
+            "source_content cannot be empty",
+        ),
+        (
+            {
+                "source_content": "text",
+                "language_id": "es",
+                "learner_level": "beginner",
+                "lesson_length_minutes": 0,
+                "focus_skills": ["speaking"],
+            },
+            "lesson_length_minutes must be between 1 and 180",
+        ),
+        (
+            {
+                "source_content": "text",
+                "language_id": "es",
+                "learner_level": "beginner",
+                "lesson_length_minutes": 10,
+                "focus_skills": ["   "],
+            },
+            "focus_skills must include at least one skill",
+        ),
+    ],
+)
+def test_admin_lessons_ai_draft_endpoint_validation_errors(
+    seeded_client, body, error_detail
+):
+    client, _, _ = seeded_client
+    resp = client.post("/api/admin/lessons/ai/draft", json=body)
+    assert resp.status_code == 422
+    assert error_detail in resp.json()["detail"]
+
+
+def test_admin_lessons_ai_refine_endpoint_success(seeded_client):
+    client, _, _ = seeded_client
+    mocked = {
+        "title": "Refined lesson",
+        "objective": "Updated objective",
+        "teaching_prompt": "Updated prompt",
+        "prompt_design_notes": "Refined",
+        "visual_aids": [],
+        "ai_generation_context": {
+            "language_id": "es",
+            "learner_level": "beginner",
+            "lesson_length_minutes": 10,
+            "focus_skills": ["speaking"],
+            "constraints": None,
+        },
+    }
+
+    with patch("app.api.admin.refine_lesson_draft", return_value=mocked) as mock_refine:
+        resp = client.post(
+            "/api/admin/lessons/ai/refine",
+            json={
+                "current_draft": mocked,
+                "admin_instruction": "  Simplify the grammar and add roleplay.  ",
+                "conversation_summary": "  first pass done  ",
+            },
+        )
+
+    assert resp.status_code == 200
+    assert resp.json()["title"] == "Refined lesson"
+    kwargs = mock_refine.call_args.kwargs
+    assert kwargs["admin_instruction"] == "Simplify the grammar and add roleplay."
+    assert kwargs["conversation_summary"] == "first pass done"
+
+
+def test_admin_lessons_ai_refine_endpoint_validation_errors(seeded_client):
+    client, _, _ = seeded_client
+
+    empty_instruction = client.post(
+        "/api/admin/lessons/ai/refine",
+        json={"current_draft": {"title": "x"}, "admin_instruction": "   "},
+    )
+    assert empty_instruction.status_code == 422
+    assert "admin_instruction cannot be empty" in empty_instruction.json()["detail"]
+
+    long_instruction = client.post(
+        "/api/admin/lessons/ai/refine",
+        json={
+            "current_draft": {"title": "x"},
+            "admin_instruction": "a" * 5001,
+        },
+    )
+    assert long_instruction.status_code == 422
+    assert "admin_instruction exceeds maximum size" in long_instruction.json()["detail"]
+
 
 # ---------------------------------------------------------------------------
 # Admin — Topics

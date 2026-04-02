@@ -19,6 +19,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from google.cloud import firestore
 from google.cloud.firestore_v1.base_document import DocumentSnapshot
 
 from app.db.client import get_firestore_client
@@ -43,7 +44,7 @@ def list_by_language(language_id: str) -> list[dict[str, Any]]:
     db = get_firestore_client()
     docs = (
         db.collection(COLLECTION)
-        .where("language_id", "==", language_id)
+        .where(filter=firestore.FieldFilter("language_id", "==", language_id))
         .order_by("sort_order")
         .stream()
     )
