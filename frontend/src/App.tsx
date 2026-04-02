@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Routes, Route, Navigate, Link } from "react-router-dom";
+import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import DebugPage from "./pages/DebugPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
@@ -27,6 +27,8 @@ import LessonSessionPage from "./pages/LessonSessionPage";
 import { FreestylePage } from "./pages/FreestylePage";
 import FreestyleSessionPage from "./pages/FreestyleSessionPage";
 import HistoryPage from "./pages/HistoryPage";
+import { IntroFlowPage } from "./pages/IntroFlowPage";
+import GuestIntroSessionPage from "./pages/GuestIntroSessionPage";
 import { AdminLayout } from "./components/AdminLayout";
 import { AdminCoursesPage } from "./pages/admin/AdminCoursesPage";
 import { AdminLessonsPage } from "./pages/admin/AdminLessonsPage";
@@ -42,12 +44,30 @@ import { SquigglyLine } from "./components/DoodleDecorations";
 const isDevelopment = process.env.NODE_ENV === 'development';
 const defaultHost = isDevelopment ? `${window.location.hostname}:8000` : window.location.host;
 const defaultUri = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${defaultHost}/`;
+const guestUserStorageKey = "language-coach-guest-user-id";
+
+function getGuestUserId(): string {
+  if (typeof window === "undefined") {
+    return "guest-user";
+  }
+  const existing = window.sessionStorage.getItem(guestUserStorageKey);
+  if (existing) {
+    return existing;
+  }
+  const generated = `guest-${crypto.randomUUID()}`;
+  window.sessionStorage.setItem(guestUserStorageKey, generated);
+  return generated;
+}
 
 /** Redirect to /login if the user is not authenticated. */
 function RequireAuth({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
   const { user, loading } = useAuth();
   if (loading) return null; // or a spinner
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    const nextPath = `${location.pathname}${location.search}`;
+    return <Navigate to={`/intro?next=${encodeURIComponent(nextPath)}`} replace />;
+  }
   return <>{children}</>;
 }
 
@@ -91,33 +111,50 @@ function AuthenticatedSession({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Wraps a session with LiveAPIProvider without requiring authentication. */
+function GuestSession({ children }: { children: React.ReactNode }) {
+  return (
+    <LiveAPIProvider url={defaultUri} userId={getGuestUserId()}>
+      {children}
+    </LiveAPIProvider>
+  );
+}
+
+/** Uses authenticated identity when available, otherwise falls back to guest identity. */
+function ProgressiveSession({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return (
+    <LiveAPIProvider url={defaultUri} userId={user?.uid ?? getGuestUserId()}>
+      {children}
+    </LiveAPIProvider>
+  );
+}
+
 function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/intro" element={<IntroFlowPage />} />
+      <Route path="/intro/session" element={
+        <GuestSession><GuestIntroSessionPage /></GuestSession>
+      } />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
       {/* Authenticated app routes */}
-      <Route path="/learn" element={
-        <RequireAuth><LearnPage /></RequireAuth>
-      } />
+      <Route path="/learn" element={<LearnPage />} />
       <Route path="/learn/session/:courseId/:lessonId" element={
         <AuthenticatedSession><LessonSessionPage /></AuthenticatedSession>
       } />
-      <Route path="/topics" element={
-        <RequireAuth><TopicPage /></RequireAuth>
-      } />
+      <Route path="/topics" element={<TopicPage />} />
       <Route path="/topics/:id" element={
         <AuthenticatedSession><TopicSessionPage /></AuthenticatedSession>
       } />
-      <Route path="/freestyle" element={
-        <RequireAuth><FreestylePage /></RequireAuth>
-      } />
+      <Route path="/freestyle" element={<FreestylePage />} />
       <Route path="/freestyle/session" element={
-        <AuthenticatedSession><FreestyleSessionPage /></AuthenticatedSession>
+        <ProgressiveSession><FreestyleSessionPage /></ProgressiveSession>
       } />
       <Route path="/history" element={
         <RequireAuth><HistoryPage /></RequireAuth>

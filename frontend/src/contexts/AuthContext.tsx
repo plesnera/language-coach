@@ -31,12 +31,21 @@ const API_BASE = import.meta.env.DEV
   : "";
 
 /**
+ * Whether the app is running under Vitest.
+ * Used to avoid emulator auto-login network calls during unit tests.
+ */
+const IS_TEST_ENV: boolean = Boolean(import.meta.env.VITEST);
+
+/**
  * Whether the app is in local-dev mode (running against emulators).
  * Used to trigger auto-login with the seeded local-test-user.
  */
 const IS_LOCAL_DEV: boolean =
-  import.meta.env.VITE_LOCAL_DEV === "true" ||
-  !import.meta.env.VITE_FIREBASE_API_KEY;
+  !IS_TEST_ENV &&
+  (
+    import.meta.env.VITE_LOCAL_DEV === "true" ||
+    (import.meta.env.DEV && !import.meta.env.VITE_FIREBASE_API_KEY)
+  );
 
 // ---------------------------------------------------------------------------
 // Single Firebase auth provider — works with both production & emulator
@@ -57,7 +66,7 @@ const InternalAuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!IS_TEST_ENV);
 
   const toAppUser = useCallback(async (fbUser: User): Promise<AppUser> => {
     const tokenResult = await fbUser.getIdTokenResult();
@@ -71,6 +80,9 @@ const InternalAuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   useEffect(() => {
+    if (IS_TEST_ENV) {
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (fbUser: User | null) => {
       if (fbUser) {
         setUser(await toAppUser(fbUser));

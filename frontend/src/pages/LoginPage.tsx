@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { HandDrawnCard } from '../components/HandDrawnCard';
 import { HandDrawnInput } from '../components/HandDrawnInput';
 import { HandDrawnButton } from '../components/HandDrawnButton';
@@ -12,7 +12,14 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
+  const requestedNextPath = searchParams.get('next');
+  const redirectTarget =
+  requestedNextPath && requestedNextPath.startsWith('/') ?
+  requestedNextPath :
+  '/learn';
+  const authQuery = requestedNextPath ? `?next=${encodeURIComponent(requestedNextPath)}` : '';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +28,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/learn');
+      navigate(redirectTarget);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -75,7 +82,7 @@ export function LoginPage() {
 
               <div className="flex justify-end">
                 <Link
-                  to="/forgot-password"
+                  to={`/forgot-password${authQuery}`}
                   className="text-sm font-medium text-[#DC2626] hover:underline underline-offset-4 decoration-wavy">
 
                   Forgot password?
@@ -94,7 +101,7 @@ export function LoginPage() {
         <p className="text-center text-[#1A1A1A] font-medium">
           Don't have an account?{' '}
           <Link
-            to="/signup"
+            to={`/signup${authQuery}`}
             className="text-[#DC2626] hover:underline underline-offset-4 decoration-wavy font-bold">
 
             Sign up

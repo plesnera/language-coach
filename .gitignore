@@ -253,3 +253,4 @@ yarn.lock
 pnpm-lock.yaml
 
 # End of .gitignore
+.gstack/

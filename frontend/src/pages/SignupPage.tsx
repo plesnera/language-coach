@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { HandDrawnCard } from '../components/HandDrawnCard';
 import { HandDrawnInput } from '../components/HandDrawnInput';
 import { HandDrawnButton } from '../components/HandDrawnButton';
@@ -18,7 +18,14 @@ export function SignupPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register } = useAuth();
+  const requestedNextPath = searchParams.get('next');
+  const redirectTarget =
+  requestedNextPath && requestedNextPath.startsWith('/') ?
+  requestedNextPath :
+  '/learn';
+  const authQuery = requestedNextPath ? `?next=${encodeURIComponent(requestedNextPath)}` : '';
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +37,7 @@ export function SignupPage() {
     setLoading(true);
     try {
       await register(email, password, name);
-      navigate('/learn');
+      navigate(redirectTarget);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
@@ -113,7 +120,7 @@ export function SignupPage() {
         <p className="text-center text-[#1A1A1A] font-medium">
           Already have an account?{' '}
           <Link
-            to="/login"
+            to={`/login${authQuery}`}
             className="text-[#DC2626] hover:underline underline-offset-4 decoration-wavy font-bold">
 
             Log in

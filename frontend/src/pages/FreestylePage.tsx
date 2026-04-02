@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { AppNavbar } from '../components/AppNavbar';
 import { HandDrawnCard } from '../components/HandDrawnCard';
@@ -9,7 +9,13 @@ import {
   MicrophoneDoodle,
   GlobeDoodle,
 } from '../components/DoodleDecorations';
-import { Mic, Loader2 } from 'lucide-react';
+import { Mic, Loader2, CheckCircle2 } from 'lucide-react';
+import {
+  canStartGuestSession,
+  getGuestSessionsRemaining,
+  recordGuestSessionStart,
+  GUEST_SESSION_LIMIT,
+} from '../utils/guestAccess';
 
 const API_BASE = import.meta.env.DEV
   ? `http://${window.location.hostname}:8000`
@@ -37,23 +43,45 @@ const FLAG_MAP: Record<string, string> = {
 };
 
 const getFlag = (name: string) => FLAG_MAP[name.toLowerCase()] ?? '🌍';
+const GUEST_LANGUAGE_OPTIONS: Language[] = [
+  { id: 'spanish', name: 'Spanish', enabled: true },
+  { id: 'french', name: 'French', enabled: true },
+  { id: 'japanese', name: 'Japanese', enabled: true },
+  { id: 'german', name: 'German', enabled: true },
+];
 
 export function FreestylePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isGuest = !user;
 
   const [languages, setLanguages] = useState<Language[]>([]);
   const [selectedLangId, setSelectedLangId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const headers = { Authorization: `Bearer ${user?.token}` };
+  const [remainingGuestSessions, setRemainingGuestSessions] = useState(
+    getGuestSessionsRemaining(),
+  );
+  const [guestGateMessage, setGuestGateMessage] = useState<string | null>(null);
+  const guestCanStart = !isGuest || remainingGuestSessions > 0;
 
   const loadLanguages = useCallback(async () => {
+    if (!user?.token) {
+      setLanguages(GUEST_LANGUAGE_OPTIONS);
+      if (!selectedLangId) {
+        setSelectedLangId(GUEST_LANGUAGE_OPTIONS[0].id);
+      }
+      setLoading(false);
+      setError(null);
+      setRemainingGuestSessions(getGuestSessionsRemaining());
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`${API_BASE}/api/languages/`, { headers });
+      const res = await fetch(`${API_BASE}/api/languages/`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
       if (!res.ok) throw new Error('Failed to load languages');
       const langs: Language[] = await res.json();
       setLanguages(langs);
@@ -70,6 +98,23 @@ export function FreestylePage() {
   useEffect(() => {
     loadLanguages();
   }, [loadLanguages]);
+
+  const handleStartSession = () => {
+    if (!selectedLangId) return;
+    if (isGuest) {
+      if (!canStartGuestSession()) {
+        setGuestGateMessage(
+          'Guest session limit reached. Create a free account to keep practicing and save your progress.',
+        );
+        setRemainingGuestSessions(getGuestSessionsRemaining());
+        return;
+      }
+      recordGuestSessionStart();
+      setRemainingGuestSessions(getGuestSessionsRemaining());
+      setGuestGateMessage(null);
+    }
+    navigate(`/freestyle/session?lang=${selectedLangId}`);
+  };
 
   const selectedLang = languages.find((l) => l.id === selectedLangId);
 
@@ -144,6 +189,65 @@ export function FreestylePage() {
           )}
         </div>
 
+        {isGuest && (
+          <div className="max-w-3xl mx-auto mb-8 space-y-4">
+            <HandDrawnCard dashed className="bg-[#F59E0B]/10">
+              <h2 className="font-heading text-2xl font-bold mb-2">
+                Guest practice mode
+              </h2>
+              <p className="text-gray-700 mb-4">
+                You can start up to {GUEST_SESSION_LIMIT} guest freestyle sessions
+                before creating an account.
+              </p>
+              <p className="text-sm font-semibold text-[#1A1A1A]">
+                Sessions remaining: {remainingGuestSessions}
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-gray-700">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2
+                    size={16}
+                    className="text-[#1A1A1A] mt-0.5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  Personalized curriculum
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2
+                    size={16}
+                    className="text-[#1A1A1A] mt-0.5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  Track improvement over time
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2
+                    size={16}
+                    className="text-[#1A1A1A] mt-0.5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  Chat about topics from your uploaded content
+                </li>
+              </ul>
+              <div className="mt-5 flex flex-col sm:flex-row gap-3">
+                <Link to="/signup" className="w-full sm:w-auto">
+                  <HandDrawnButton variant="primary" className="w-full sm:w-auto">
+                    Create free account
+                  </HandDrawnButton>
+                </Link>
+                <Link to="/login" className="w-full sm:w-auto">
+                  <HandDrawnButton variant="outline" className="w-full sm:w-auto">
+                    Log In
+                  </HandDrawnButton>
+                </Link>
+              </div>
+            </HandDrawnCard>
+            {guestGateMessage && (
+              <p className="text-[#DC2626] font-semibold" role="status" aria-live="polite">
+                {guestGateMessage}
+              </p>
+            )}
+          </div>
+        )}
         {/* Freestyle card */}
         {selectedLang && (
           <div className="max-w-2xl mx-auto">
@@ -162,7 +266,8 @@ export function FreestylePage() {
               <HandDrawnButton
                 variant="primary"
                 className="text-lg px-8 py-3"
-                onClick={() => navigate(`/freestyle/session?lang=${selectedLangId}`)}
+                onClick={handleStartSession}
+                disabled={!guestCanStart}
               >
                 Start Talking <Mic size={20} />
               </HandDrawnButton>

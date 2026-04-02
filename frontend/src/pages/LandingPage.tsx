@@ -52,6 +52,12 @@ export function LandingPage() {
           </Link>
           <div className="flex items-center gap-4 sm:gap-6">
             <Link
+              to="/intro"
+              className="font-medium hover:text-[#DC2626] transition-colors hidden sm:block">
+
+              Try Demo
+            </Link>
+            <Link
               to="/signup"
               className="font-medium hover:text-[#DC2626] transition-colors hidden sm:block">
 
@@ -120,25 +126,23 @@ export function LandingPage() {
               className="flex flex-col items-center gap-4">
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link to="/login" className="w-full sm:w-auto">
+                <Link to="/intro" className="w-full sm:w-auto">
                   <HandDrawnButton
                     variant="primary"
                     className="w-full sm:w-auto text-lg py-4 px-8">
-
-                    Start Learning — It's Free
+                    Try a 2-minute demo
                   </HandDrawnButton>
                 </Link>
-                <a href="#how-it-works" className="w-full sm:w-auto">
+                <Link to="/login" className="w-full sm:w-auto">
                   <HandDrawnButton
                     variant="outline"
                     className="w-full sm:w-auto text-lg py-4 px-8">
-
-                    See How It Works
+                    Log In
                   </HandDrawnButton>
-                </a>
+                </Link>
               </div>
               <p className="text-sm text-gray-500">
-                Not yet a member?{' '}
+                No signup needed for the demo. Want the full experience?{' '}
                 <Link
                   to="/signup"
                   className="text-[#DC2626] hover:underline underline-offset-4 decoration-wavy font-bold">
@@ -446,16 +450,26 @@ export function LandingPage() {
             </motion.p>
             <motion.div
               variants={fadeInUp}
-              className="flex flex-col items-center gap-6">
+              className="flex flex-col items-center gap-4">
 
-              <Link to="/login">
-                <HandDrawnButton
-                  variant="primary"
-                  className="text-xl py-5 px-10">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link to="/intro">
+                  <HandDrawnButton
+                    variant="primary"
+                    className="text-xl py-5 px-10">
 
-                  Log In & Start Learning
-                </HandDrawnButton>
-              </Link>
+                    Try a guest intro
+                  </HandDrawnButton>
+                </Link>
+                <Link to="/login">
+                  <HandDrawnButton
+                    variant="outline"
+                    className="text-xl py-5 px-10">
+
+                    Log In
+                  </HandDrawnButton>
+                </Link>
+              </div>
               <p className="text-[#1A1A1A] font-medium">
                 Not yet a member?{' '}
                 <Link

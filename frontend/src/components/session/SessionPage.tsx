@@ -9,6 +9,8 @@ export interface SessionPageProps {
   title: string;
   /** Optional subtitle / description */
   subtitle?: string;
+  /** Route used by the back button in the header */
+  backTo?: string;
   /**
    * Context sent to the agent as the first text message after the WebSocket
    * connects.  Use this to pass lesson / topic teaching prompts so the agent
@@ -22,6 +24,7 @@ export interface SessionPageProps {
 const SessionPage: React.FC<SessionPageProps> = ({
   title,
   subtitle,
+  backTo = "/learn",
   systemContext,
   children,
 }) => {
@@ -50,7 +53,12 @@ const SessionPage: React.FC<SessionPageProps> = ({
   return (
     <div className="session-page">
       <header className="session-header">
-        <button className="back-button" onClick={() => navigate("/learn")}>
+        <button
+          className="back-button"
+          type="button"
+          aria-label="Go back"
+          onClick={() => navigate(backTo)}
+        >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <div className="session-header-text">

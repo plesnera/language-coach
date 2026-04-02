@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { AppNavbar } from '../components/AppNavbar';
 import { HandDrawnCard } from '../components/HandDrawnCard';
@@ -9,7 +9,7 @@ import {
   BookDoodle,
   GlobeDoodle,
 } from '../components/DoodleDecorations';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Loader2, Lock, Mic, Wifi } from 'lucide-react';
 
 const API_BASE = import.meta.env.DEV
   ? `http://${window.location.hostname}:8000`
@@ -71,10 +71,129 @@ const FLAG_MAP: Record<string, string> = {
   english: '🇬🇧',
 };
 const getFlag = (name: string) => FLAG_MAP[name.toLowerCase()] ?? '🌍';
+const LEARN_PREVIEW_LESSONS = [
+  {
+    title: 'Greetings in context',
+    objective: 'Practice a natural hello + follow-up exchange with an AI language coach.',
+  },
+  {
+    title: 'Ordering at a café',
+    objective: 'Learn high-frequency phrases through a realistic dialogue scenario.',
+  },
+  {
+    title: 'Asking for directions',
+    objective: 'Build confidence with guided turn-by-turn conversation practice.',
+  },
+];
+
+function LearnGuestPreview() {
+  const nextTarget = encodeURIComponent('/learn');
+  return (
+    <div className="min-h-screen flex flex-col bg-[#FAFAF8]">
+      <AppNavbar />
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12 relative">
+        <BookDoodle className="absolute top-20 right-10 w-24 h-24 text-[#F59E0B] opacity-30 rotate-12 hidden lg:block" />
+        <GlobeDoodle className="absolute bottom-40 left-10 w-32 h-32 text-[#DC2626] opacity-20 -rotate-12 hidden lg:block" />
+
+        <div className="mb-10">
+          <div className="inline-block relative mb-5">
+            <h1 className="font-heading text-4xl md:text-5xl font-bold text-[#1A1A1A]">
+              Learn
+            </h1>
+            <SquigglyLine className="absolute -bottom-3 left-0 w-full h-3 text-[#DC2626]" />
+          </div>
+          <p className="text-gray-700 max-w-3xl">
+            Try a preview of dialogue-based lessons. You will practice real
+            conversations with a specialized AI coach in your target language.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <HandDrawnCard dashed className="bg-[#F59E0B]/10">
+            <h2 className="font-heading text-2xl font-bold mb-3">How it works</h2>
+            <ul className="space-y-2 text-gray-700">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-[#1A1A1A]" aria-hidden="true" />
+                Dialogue-based lessons with a specialized AI coach in the language you are learning.
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-[#1A1A1A]" aria-hidden="true" />
+                Real-time speaking practice with corrective guidance and better phrase suggestions.
+              </li>
+            </ul>
+          </HandDrawnCard>
+
+          <HandDrawnCard rotate="right">
+            <h2 className="font-heading text-2xl font-bold mb-3">Requirements</h2>
+            <ul className="space-y-2 text-gray-700">
+              <li className="flex items-start gap-2">
+                <Mic size={18} className="mt-0.5 shrink-0 text-[#1A1A1A]" aria-hidden="true" />
+                Audio-enabled browser with microphone access.
+              </li>
+              <li className="flex items-start gap-2">
+                <Wifi size={18} className="mt-0.5 shrink-0 text-[#1A1A1A]" aria-hidden="true" />
+                Stable internet access for live conversation sessions.
+              </li>
+            </ul>
+          </HandDrawnCard>
+        </div>
+
+        <HandDrawnCard rotate="none">
+          <h2 className="font-heading text-2xl font-bold mb-3">Preview curriculum</h2>
+          <p className="text-gray-600 mb-5">
+            Create a free account to unlock these interactive lessons and save your progress.
+          </p>
+          <div className="space-y-3">
+            {LEARN_PREVIEW_LESSONS.map((lesson, index) => (
+              <div
+                key={lesson.title}
+                className="border-2 border-[#1A1A1A] hand-drawn-border-alt bg-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full border-2 border-[#1A1A1A] flex items-center justify-center font-bold">
+                    {index + 1}
+                  </div>
+                  <div>
+                    <h3 className="font-heading text-xl font-bold">{lesson.title}</h3>
+                    <p className="text-gray-600">{lesson.objective}</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#1A1A1A]">
+                  <Lock size={16} aria-hidden="true" />
+                  Account required
+                </span>
+              </div>
+            ))}
+          </div>
+        </HandDrawnCard>
+
+        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+          <Link to={`/intro?next=${nextTarget}`} className="w-full sm:w-auto">
+            <HandDrawnButton className="w-full sm:w-auto" variant="secondary">
+              Try guest intro
+            </HandDrawnButton>
+          </Link>
+          <Link to={`/signup?next=${nextTarget}`} className="w-full sm:w-auto">
+            <HandDrawnButton className="w-full sm:w-auto" variant="primary">
+              Create free account
+            </HandDrawnButton>
+          </Link>
+          <Link to={`/login?next=${nextTarget}`} className="w-full sm:w-auto">
+            <HandDrawnButton className="w-full sm:w-auto" variant="outline">
+              Log In
+            </HandDrawnButton>
+          </Link>
+        </div>
+      </main>
+    </div>
+  );
+}
 
 export function LearnPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isGuest = !user;
 
   // ---- Shared state ----
   const [languages, setLanguages] = useState<Language[]>([]);
@@ -91,6 +210,11 @@ export function LearnPage() {
 
   // ---- Fetch languages + progress on mount ----
   const loadInitial = useCallback(async () => {
+    if (!user?.token) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -176,6 +300,9 @@ export function LearnPage() {
   };
 
   // ---- Render ----
+  if (isGuest) {
+    return <LearnGuestPreview />;
+  }
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-[#FAFAF8]">

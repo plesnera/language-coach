@@ -152,6 +152,17 @@ Hand-drawn aesthetic. Key components in `frontend/src/components/`:
 - Loading states use `<Loader2 className="animate-spin">` from lucide-react
 - Empty states use dashed border + helpful action text
 
+### Design policy (mandatory)
+
+- `DESIGN.md` is the product design source of truth and must be followed for new UI and UX changes.
+- Accessibility is a release gate: all critical flows must be keyboard operable, screen-reader understandable, and meet WCAG 2.2 AA expectations (contrast, focus visibility, semantics, labels, and error messaging).
+- New users must be able to try a meaningful part of the app before signup.
+- Signup should be introduced during the intro flow after a value moment, with explicit benefits:
+  - Personalized curriculum
+  - Tracking improvement over time
+  - Chatting about topics based on user-uploaded content
+- Auth gating must be progressive: at least one useful guest experience is available before requiring account creation.
+
 ---
 
 ## Key Conventions
