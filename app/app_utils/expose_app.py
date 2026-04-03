@@ -25,6 +25,7 @@ from typing import Any, Literal
 import backoff
 import google.auth
 import vertexai
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -32,6 +33,14 @@ from fastapi.staticfiles import StaticFiles
 from google.cloud import logging as google_cloud_logging
 from pydantic import BaseModel, Field
 from websockets.exceptions import ConnectionClosedError
+
+load_dotenv(override=True)
+_project_id = os.environ.get("GOOGLE_CLOUD_PROJECT_ID") or os.environ.get(
+    "GOOGLE_CLOUD_PROJECT"
+)
+if _project_id:
+    os.environ["GOOGLE_CLOUD_PROJECT_ID"] = _project_id
+    os.environ["GOOGLE_CLOUD_PROJECT"] = _project_id
 
 
 def _seed_local_test_user() -> None:

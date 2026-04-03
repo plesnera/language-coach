@@ -87,6 +87,16 @@ def update(language_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
     return _doc_to_dict(ref.get())
 
 
+def delete(language_id: str) -> bool:
+    """Delete a language document."""
+    db = get_firestore_client()
+    ref = db.collection(COLLECTION).document(language_id)
+    if not ref.get().exists:
+        return False
+    ref.delete()
+    return True
+
+
 def seed_defaults() -> None:
     """Ensure the default Spanish language exists."""
     if get("es") is None:

@@ -39,6 +39,11 @@ make playground    # build frontend + start backend at http://localhost:8000
 | `make local-backend` | Backend only with hot-reload |
 | `make ui` | Frontend only on :8501 |
 | `make playground-dev` | Frontend + backend both with hot-reload |
+| `make setup-dev-env` | Provision required GCP resources (Firestore, buckets, IAM) for the active project |
+| `make deploy-agent` | Deploy the ADK agent to Vertex Agent Engine |
+| `make deploy-api` | Deploy the API/WebSocket service to Cloud Run (remote Agent Engine mode) |
+| `make deploy-frontend` | Build and deploy the frontend to Firebase Hosting |
+| `make deploy` | Deploy the full stack (agent + API + frontend) |
 | `make test` | Run unit and integration tests |
 | `make lint` | Run codespell + ruff |
 
@@ -102,5 +107,18 @@ Learner endpoints are under `/api/` and use `Depends(get_current_user)`.
 
 ```bash
 gcloud config set project <your-project-id>
-make deploy
+make setup-dev-env  # one-time per project (provisions Firestore/APIs/buckets/IAM)
+make deploy         # full stack: agent + API + frontend
 ```
+For step-by-step deploys you can run:
+
+```bash
+make deploy-agent
+make deploy-api
+make deploy-frontend
+```
+
+Notes:
+- `make deploy-agent` auto-uses `${PROJECT_ID}-language-coach-app@${PROJECT_ID}.iam.gserviceaccount.com` when it exists.
+- `make deploy-api` reads `deployment_metadata.json` from `make deploy-agent` unless you set `REMOTE_AGENT_ENGINE_ID=projects/.../reasoningEngines/...`.
+- `make deploy-frontend` auto-discovers the API URL from Cloud Run unless you set `FRONTEND_API_BASE_URL` and `FRONTEND_WS_BASE_URL`.

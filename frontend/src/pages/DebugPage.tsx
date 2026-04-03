@@ -19,11 +19,9 @@ import "../styles/DebugPage.scss";
 import { LiveAPIProvider } from "../contexts/LiveAPIContext";
 import SidePanel from "../components/side-panel/SidePanel";
 import cn from "classnames";
+import { WS_BASE_URL } from "../config/endpoints";
 
-// In development mode (frontend on :8501), connect to backend on :8000
-const isDevelopment = window.location.port === '8501';
-const defaultHost = isDevelopment ? `${window.location.hostname}:8000` : window.location.host;
-const defaultUri = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${defaultHost}/`;
+const defaultUri = WS_BASE_URL;
 
 function DebugPage() {
   const videoRef = useRef<HTMLVideoElement>(null);

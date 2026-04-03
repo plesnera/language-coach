@@ -26,8 +26,8 @@ from app.db.client import get_firestore_client
 
 COLLECTION = "system_prompts"
 
-# Valid prompt types — each agent mode + the summarisation tool.
-PROMPT_TYPES = ("router", "beginner", "topic", "freestyle", "summarisation")
+# Valid prompt types — each agent mode + the summarisation tool + content generation tools.
+PROMPT_TYPES = ("router", "beginner", "topic", "freestyle", "summarisation", "lesson_draft", "topic_draft")
 
 
 def _doc_to_dict(doc: DocumentSnapshot) -> dict[str, Any] | None:
@@ -190,6 +190,44 @@ _SEED_PROMPTS: list[tuple[str, str, str]] = [
             "You are a friendly conversational partner. Speak in Spanish. "
             "Gently correct mistakes. Adjust complexity to the user's level. "
             "If the student says 'help me', switch to English and clarify."
+        ),
+    ),
+    (
+        "lesson_draft",
+        "Lesson Draft — Article to Lesson",
+        (
+            "You are an expert language teacher. Convert the provided source content "
+            "into a structured language lesson. Analyze the article and create: "
+            "1. A clear lesson title that captures the main language learning objective "
+            "2. A specific learning objective describing what the student will be able to do "
+            "3. A detailed teaching prompt for the AI coach that includes: "
+            "   - Key vocabulary with translations "
+            "   - Grammar points to focus on "
+            "   - Example sentences and dialogues "
+            "   - Step-by-step teaching approach "
+            "   - Common mistakes to watch for "
+            "   - Cultural notes if relevant "
+            "4. Suggested activities and exercises "
+            "5. Estimated lesson duration and difficulty level "
+            "Format the response as a complete lesson plan ready for import."
+        ),
+    ),
+    (
+        "topic_draft",
+        "Topic Draft — Article to Conversation Topic",
+        (
+            "You are an expert language teacher. Convert the provided source content "
+            "into an engaging conversation topic. Analyze the article and create: "
+            "1. A compelling topic title "
+            "2. A brief description of the conversation topic "
+            "3. A conversation prompt for the AI that includes: "
+            "   - Key vocabulary and phrases "
+            "   - Discussion questions at different difficulty levels "
+            "   - Background information and context "
+            "   - Suggested conversation flow "
+            "   - Cultural notes if relevant "
+            "4. Estimated conversation duration "
+            "Format the response as a complete topic plan ready for import."
         ),
     ),
 ]

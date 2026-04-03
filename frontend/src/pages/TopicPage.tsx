@@ -10,10 +10,8 @@ import {
   GlobeDoodle,
 } from '../components/DoodleDecorations';
 import { CheckCircle2, ChevronRight, Loader2, Lock, Mic, Wifi } from 'lucide-react';
+import { API_BASE } from '../config/endpoints';
 
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : '';
 
 interface Language {
   id: string;

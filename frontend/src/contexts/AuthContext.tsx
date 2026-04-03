@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { API_BASE } from "../config/endpoints";
 
 export interface AppUser {
   uid: string;
@@ -26,9 +27,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : "";
 
 /**
  * Whether the app is running under Vitest.

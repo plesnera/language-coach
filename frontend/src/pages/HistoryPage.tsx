@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import "../styles/HistoryPage.scss";
+import { API_BASE } from "../config/endpoints";
 
 interface Message {
   role: string;
@@ -18,9 +19,6 @@ interface Conversation {
   created_at: string;
 }
 
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : "";
 
 const modeLabels: Record<string, string> = {
   beginner: "Beginner Track",

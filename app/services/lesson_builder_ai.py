@@ -91,6 +91,7 @@ def _generate_with_gemini(
     conversation_summary: str | None,
 ) -> dict[str, Any]:
     from google import genai
+    from app.db import system_prompts as prompts_repo
 
     client = genai.Client()
     schema_hint = """
@@ -119,29 +120,50 @@ Return only valid JSON with this shape:
 No markdown. No prose outside JSON.
 """.strip()
 
+    # Get the appropriate prompt from Firestore
+    prompt_type = "lesson_draft" if mode == "draft" else "lesson_draft"  # Both use lesson_draft for now
+    system_prompt_doc = prompts_repo.get_active(language_id, prompt_type)
+    
+    if system_prompt_doc:
+        base_prompt = system_prompt_doc["prompt_text"]
+    else:
+        # Fallback to default prompt
+        base_prompt = (
+            "You are helping an admin design a language lesson. "
+            "Create a high-quality first draft based on the provided source content."
+        )
+
     if mode == "draft":
         prompt = f"""
-You are helping an admin design a language lesson.
-Create a high-quality first draft based on:
+{base_prompt}
+
+Parameters:
 - language_id: {language_id}
 - learner_level: {learner_level}
 - lesson_length_minutes: {lesson_length_minutes}
 - focus_skills: {focus_skills}
 - constraints: {constraints or "none"}
+
 Source content:
 {source_content}
+
 {schema_hint}
 """.strip()
     else:
         prompt = f"""
-You are refining an existing language lesson draft for an admin.
+{base_prompt}
+
 Current draft JSON:
 {json.dumps(current_draft or {}, ensure_ascii=False)}
+
 Admin instruction:
 {admin_instruction or ""}
+
 Conversation summary:
 {conversation_summary or ""}
+
 Please revise while preserving coherence and teaching quality.
+
 {schema_hint}
 """.strip()
 

@@ -40,5 +40,8 @@ def get_firestore_client() -> Any:
         project = os.environ.get("GOOGLE_CLOUD_PROJECT_ID") or os.environ.get(
             "GOOGLE_CLOUD_PROJECT"
         )
+        if project:
+            os.environ["GOOGLE_CLOUD_PROJECT_ID"] = project
+            os.environ["GOOGLE_CLOUD_PROJECT"] = project
         _client = firestore.Client(project=project)
     return _client

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Edit2,
@@ -19,10 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { HandDrawnButton } from '../../components/HandDrawnButton';
 import { HandDrawnCard } from '../../components/HandDrawnCard';
 import { HandDrawnInput } from '../../components/HandDrawnInput';
-
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : '';
+import { API_BASE } from '../../config/endpoints';
 
 interface Lesson {
   id: string;
@@ -65,6 +62,7 @@ interface AILessonDraft {
 
 export function AdminLessonsPage() {
   const { courseId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const headers: Record<string, string> = {
     Authorization: `Bearer ${user?.token}`,
@@ -117,6 +115,17 @@ export function AdminLessonsPage() {
   useEffect(() => {
     loadLessons();
   }, [loadLessons]);
+
+  // ---- Handle edit parameter ----
+  useEffect(() => {
+    if (isModalOpen) return;
+    const editLessonId = searchParams.get('edit');
+    if (!editLessonId) return;
+    const lessonToEdit = lessons.find((lesson) => lesson.id === editLessonId);
+    if (lessonToEdit) {
+      handleOpenModal(lessonToEdit);
+    }
+  }, [isModalOpen, lessons, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Image library ----
   const loadImageLibrary = useCallback(async () => {
@@ -174,6 +183,11 @@ export function AdminLessonsPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setCurrentLesson({});
+    if (searchParams.has('edit')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('edit');
+      setSearchParams(next, { replace: true });
+    }
   };
 
   const parseFocusSkills = (value: string) =>
@@ -688,9 +702,23 @@ export function AdminLessonsPage() {
                 </h3>
                 <div className="mb-6 p-4 border-2 border-[#1A1A1A] hand-drawn-border-alt bg-[#FAFAF8]">
                   <h4 className="font-heading font-bold text-base mb-3">AI Assist Lesson Builder</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Upload an article, text, or document to automatically generate a structured lesson plan.
+                  </p>
                   <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-bold mb-1">Source Content</label>
+                    <div className="border-2 border-dashed border-gray-300 hand-drawn-border-alt p-4 text-center">
+                      <div className="mb-3">
+                        <label className="inline-flex items-center gap-2 text-sm font-bold px-4 py-2 border-2 border-[#1A1A1A] hand-drawn-border-alt cursor-pointer hover:bg-gray-100 transition-colors">
+                          <Upload size={16} /> Upload Article (TXT/MD/PDF)
+                          <input
+                            type="file"
+                            accept=".txt,.md,.pdf"
+                            onChange={handleSourceFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-2">or paste text directly:</p>
                       <textarea
                         className="w-full bg-white border-2 border-[#1A1A1A] hand-drawn-border-alt px-3 py-2 text-sm"
                         rows={4}
@@ -698,15 +726,6 @@ export function AdminLessonsPage() {
                         onChange={(e) => setAiSourceContent(e.target.value)}
                         placeholder="Paste source material for this lesson design..."
                       />
-                      <label className="inline-flex items-center gap-1 mt-2 text-xs font-bold px-3 py-1.5 border-2 border-[#1A1A1A] hand-drawn-border-alt cursor-pointer hover:bg-gray-100 transition-colors">
-                        <Upload size={14} /> Upload TXT/MD/PDF
-                        <input
-                          type="file"
-                          accept=".txt,.md,.pdf"
-                          onChange={handleSourceFileUpload}
-                          className="hidden"
-                        />
-                      </label>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <HandDrawnInput

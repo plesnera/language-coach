@@ -1,15 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Edit2, Trash2, BookOpen, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { HandDrawnButton } from '../../components/HandDrawnButton';
 import { HandDrawnCard } from '../../components/HandDrawnCard';
 import { HandDrawnInput } from '../../components/HandDrawnInput';
 import { SquigglyLine } from '../../components/DoodleDecorations';
-
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : '';
+import { API_BASE } from '../../config/endpoints';
 
 interface Language {
   id: string;
@@ -27,6 +24,7 @@ interface Course {
 
 export function AdminCoursesPage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const headers: Record<string, string> = {
     Authorization: `Bearer ${user?.token}`,
     'Content-Type': 'application/json',
@@ -51,7 +49,13 @@ export function AdminCoursesPage() {
         if (res.ok) {
           const langs: Language[] = await res.json();
           setLanguages(langs);
-          if (langs.length > 0) setSelectedLangId(langs[0].id);
+          const preferredLangId = searchParams.get('language_id');
+          const hasPreferredLanguage = preferredLangId
+            ? langs.some((lang) => lang.id === preferredLangId)
+            : false;
+          if (langs.length > 0) {
+            setSelectedLangId(hasPreferredLanguage ? preferredLangId : langs[0].id);
+          }
         }
       } catch (err) {
         console.error('Failed to load languages', err);
@@ -59,7 +63,7 @@ export function AdminCoursesPage() {
         setLoading(false);
       }
     })();
-  }, [user?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, user?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Load courses when language changes ----
   const loadCourses = useCallback(async () => {

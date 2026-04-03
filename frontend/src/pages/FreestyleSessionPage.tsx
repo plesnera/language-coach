@@ -6,10 +6,7 @@ import SessionPage from "../components/session/SessionPage";
 import { HandDrawnCard } from "../components/HandDrawnCard";
 import { HandDrawnButton } from "../components/HandDrawnButton";
 import { getGuestSessionsRemaining } from "../utils/guestAccess";
-
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : "";
+import { API_BASE } from "../config/endpoints";
 
 interface Language {
   id: string;

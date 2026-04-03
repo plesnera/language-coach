@@ -3,10 +3,7 @@ import { Shield, ShieldOff, Ban, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { HandDrawnCard } from '../../components/HandDrawnCard';
 import { SquigglyLine } from '../../components/DoodleDecorations';
-
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : '';
+import { API_BASE } from '../../config/endpoints';
 
 interface User {
   uid: string;

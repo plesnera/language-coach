@@ -30,17 +30,21 @@ resource "google_cloudbuild_trigger" "pr_checks" {
   filename = ".cloudbuild/pr_checks.yaml"
   included_files = [
     "app/**",
+    "frontend/**",
+    ".cloudbuild/**",
+    "firebase.json",
+    "Makefile",
     "data_ingestion/**",
     "tests/**",
     "deployment/**",
     "uv.lock",
-  
+
   ]
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   depends_on = [
-    resource.google_project_service.cicd_services, 
-    resource.google_project_service.deploy_project_services, 
-    google_cloudbuildv2_connection.github_connection, 
+    resource.google_project_service.cicd_services,
+    resource.google_project_service.deploy_project_services,
+    google_cloudbuildv2_connection.github_connection,
     google_cloudbuildv2_repository.repo
   ]
 }
@@ -63,6 +67,10 @@ resource "google_cloudbuild_trigger" "cd_pipeline" {
   filename = ".cloudbuild/staging.yaml"
   included_files = [
     "app/**",
+    "frontend/**",
+    ".cloudbuild/**",
+    "firebase.json",
+    "Makefile",
     "data_ingestion/**",
     "tests/**",
     "deployment/**",
@@ -70,16 +78,20 @@ resource "google_cloudbuild_trigger" "cd_pipeline" {
   ]
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   substitutions = {
-    _STAGING_PROJECT_ID            = var.staging_project_id
-    _LOGS_BUCKET_NAME_STAGING      = resource.google_storage_bucket.logs_data_bucket[var.staging_project_id].name
-    _APP_SERVICE_ACCOUNT_STAGING   = google_service_account.app_sa["staging"].email
-    _REGION                        = var.region
-    # Your other CD Pipeline substitutions
+    _STAGING_PROJECT_ID          = var.staging_project_id
+    _LOGS_BUCKET_NAME_STAGING    = resource.google_storage_bucket.logs_data_bucket[var.staging_project_id].name
+    _APP_SERVICE_ACCOUNT_STAGING = google_service_account.app_sa["staging"].email
+    _REGION                      = var.region
+    _API_SERVICE_NAME            = "${var.project_name}-api"
+    _DEPLOY_DISPLAY_NAME         = var.project_name
+    _PROD_DEPLOY_TRIGGER_NAME    = "deploy-${var.project_name}"
+    _FRONTEND_API_BASE_URL       = ""
+    _FRONTEND_WS_BASE_URL        = ""
   }
   depends_on = [
-    resource.google_project_service.cicd_services, 
-    resource.google_project_service.deploy_project_services, 
-    google_cloudbuildv2_connection.github_connection, 
+    resource.google_project_service.cicd_services,
+    resource.google_project_service.deploy_project_services,
+    google_cloudbuildv2_connection.github_connection,
     google_cloudbuildv2_repository.repo
   ]
 
@@ -95,22 +107,25 @@ resource "google_cloudbuild_trigger" "deploy_to_prod_pipeline" {
   repository_event_config {
     repository = "projects/${var.cicd_runner_project_id}/locations/${var.region}/connections/${var.host_connection_name}/repositories/${var.repository_name}"
   }
-  filename = ".cloudbuild/deploy-to-prod.yaml"
+  filename           = ".cloudbuild/deploy-to-prod.yaml"
   include_build_logs = "INCLUDE_BUILD_LOGS_WITH_STATUS"
   approval_config {
     approval_required = true
   }
   substitutions = {
-    _PROD_PROJECT_ID             = var.prod_project_id
-    _LOGS_BUCKET_NAME_PROD       = resource.google_storage_bucket.logs_data_bucket[var.prod_project_id].name
-    _APP_SERVICE_ACCOUNT_PROD    = google_service_account.app_sa["prod"].email
-    _REGION                      = var.region
-    # Your other Deploy to Prod Pipeline substitutions
+    _PROD_PROJECT_ID          = var.prod_project_id
+    _LOGS_BUCKET_NAME_PROD    = resource.google_storage_bucket.logs_data_bucket[var.prod_project_id].name
+    _APP_SERVICE_ACCOUNT_PROD = google_service_account.app_sa["prod"].email
+    _REGION                   = var.region
+    _API_SERVICE_NAME         = "${var.project_name}-api"
+    _DEPLOY_DISPLAY_NAME      = var.project_name
+    _FRONTEND_API_BASE_URL    = ""
+    _FRONTEND_WS_BASE_URL     = ""
   }
   depends_on = [
-    resource.google_project_service.cicd_services, 
-    resource.google_project_service.deploy_project_services, 
-    google_cloudbuildv2_connection.github_connection, 
+    resource.google_project_service.cicd_services,
+    resource.google_project_service.deploy_project_services,
+    google_cloudbuildv2_connection.github_connection,
     google_cloudbuildv2_repository.repo
   ]
 

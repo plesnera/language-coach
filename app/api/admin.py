@@ -57,6 +57,34 @@ def create_language(body: CreateLanguageRequest) -> dict[str, Any]:
     return lang_repo.create(body.id, body.name, body.enabled)
 
 
+@router.get("/languages/{language_id}")
+def get_language(language_id: str) -> dict[str, Any]:
+    language = lang_repo.get(language_id)
+    if language is None:
+        raise HTTPException(404, "Language not found")
+    return language
+
+
+class UpdateLanguageRequest(BaseModel):
+    name: str | None = None
+    enabled: bool | None = None
+
+
+@router.put("/languages/{language_id}")
+def update_language(language_id: str, body: UpdateLanguageRequest) -> dict[str, Any]:
+    fields = {k: v for k, v in body.model_dump().items() if v is not None}
+    result = lang_repo.update(language_id, fields)
+    if result is None:
+        raise HTTPException(404, "Language not found")
+    return result
+
+
+@router.delete("/languages/{language_id}", status_code=204)
+def delete_language(language_id: str) -> None:
+    if not lang_repo.delete(language_id):
+        raise HTTPException(404, "Language not found")
+
+
 # ── Courses ─────────────────────────────────────────────────────────────────
 
 
@@ -237,6 +265,64 @@ def refine_lesson_ai_draft(body: LessonAIRefineRequest) -> dict[str, Any]:
     if len(instruction) > 5_000:
         raise HTTPException(422, "admin_instruction exceeds maximum size")
     return refine_lesson_draft(
+        current_draft=body.current_draft,
+        admin_instruction=instruction,
+        conversation_summary=(body.conversation_summary or "").strip() or None,
+    )
+
+
+# ── Topic AI Drafting ────────────────────────────────────────────────────────
+
+
+class TopicAIDraftRequest(BaseModel):
+    source_content: str
+    language_id: str = "es"
+    conversation_duration_minutes: int = 15
+    difficulty_level: str = "intermediate"
+    focus_skills: list[str] = Field(default_factory=lambda: ["speaking"])
+    constraints: str | None = None
+
+
+@router.post("/topics/ai/draft")
+def create_topic_ai_draft(body: TopicAIDraftRequest) -> dict[str, Any]:
+    from app.services.topic_builder_ai import generate_topic_draft
+    
+    source_content = body.source_content.strip()
+    if not source_content:
+        raise HTTPException(422, "source_content cannot be empty")
+    if len(source_content) > 30_000:
+        raise HTTPException(422, "source_content exceeds maximum size")
+    if body.conversation_duration_minutes <= 0 or body.conversation_duration_minutes > 180:
+        raise HTTPException(422, "conversation_duration_minutes must be between 1 and 180")
+    parsed_focus_skills = [skill.strip() for skill in body.focus_skills if skill.strip()]
+    if len(parsed_focus_skills) == 0:
+        raise HTTPException(422, "focus_skills must include at least one skill")
+    return generate_topic_draft(
+        source_content=source_content,
+        language_id=body.language_id.strip() or "es",
+        conversation_duration_minutes=body.conversation_duration_minutes,
+        difficulty_level=body.difficulty_level.strip() or "intermediate",
+        focus_skills=parsed_focus_skills,
+        constraints=(body.constraints or "").strip() or None,
+    )
+
+
+class TopicAIRefineRequest(BaseModel):
+    current_draft: dict[str, Any]
+    admin_instruction: str
+    conversation_summary: str | None = None
+
+
+@router.post("/topics/ai/refine")
+def refine_topic_ai_draft(body: TopicAIRefineRequest) -> dict[str, Any]:
+    from app.services.topic_builder_ai import refine_topic_draft
+    
+    instruction = body.admin_instruction.strip()
+    if not instruction:
+        raise HTTPException(422, "admin_instruction cannot be empty")
+    if len(instruction) > 5_000:
+        raise HTTPException(422, "admin_instruction exceeds maximum size")
+    return refine_topic_draft(
         current_draft=body.current_draft,
         admin_instruction=instruction,
         conversation_summary=(body.conversation_summary or "").strip() or None,

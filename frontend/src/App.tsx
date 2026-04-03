@@ -30,6 +30,8 @@ import HistoryPage from "./pages/HistoryPage";
 import { IntroFlowPage } from "./pages/IntroFlowPage";
 import GuestIntroSessionPage from "./pages/GuestIntroSessionPage";
 import { AdminLayout } from "./components/AdminLayout";
+import { AdminMainPage } from "./pages/admin/AdminMainPage";
+import { AdminLanguagePage } from "./pages/admin/AdminLanguagePage";
 import { AdminCoursesPage } from "./pages/admin/AdminCoursesPage";
 import { AdminLessonsPage } from "./pages/admin/AdminLessonsPage";
 import { AdminTopicsPage } from "./pages/admin/AdminTopicsPage";
@@ -40,10 +42,10 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { HandDrawnCard } from "./components/HandDrawnCard";
 import { HandDrawnButton } from "./components/HandDrawnButton";
 import { SquigglyLine } from "./components/DoodleDecorations";
+import { WS_BASE_URL } from "./config/endpoints";
 
 const isDevelopment = process.env.NODE_ENV === 'development';
-const defaultHost = isDevelopment ? `${window.location.hostname}:8000` : window.location.host;
-const defaultUri = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${defaultHost}/`;
+const defaultUri = WS_BASE_URL;
 const guestUserStorageKey = "language-coach-guest-user-id";
 
 function getGuestUserId(): string {
@@ -164,7 +166,8 @@ function AppRoutes() {
       <Route path="/admin" element={
         <RequireAdmin><AdminLayout /></RequireAdmin>
       }>
-        <Route index element={<Navigate to="/admin/courses" replace />} />
+        <Route index element={<AdminMainPage />} />
+        <Route path="languages/:languageId" element={<AdminLanguagePage />} />
         <Route path="courses" element={<AdminCoursesPage />} />
         <Route path="courses/:courseId/lessons" element={<AdminLessonsPage />} />
         <Route path="topics" element={<AdminTopicsPage />} />

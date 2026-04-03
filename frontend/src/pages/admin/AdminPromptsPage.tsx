@@ -5,10 +5,7 @@ import { HandDrawnButton } from '../../components/HandDrawnButton';
 import { HandDrawnCard } from '../../components/HandDrawnCard';
 import { HandDrawnInput } from '../../components/HandDrawnInput';
 import { SquigglyLine } from '../../components/DoodleDecorations';
-
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : '';
+import { API_BASE } from '../../config/endpoints';
 
 const PROMPT_TYPES = ['router', 'beginner', 'topic', 'freestyle', 'summarisation'];
 

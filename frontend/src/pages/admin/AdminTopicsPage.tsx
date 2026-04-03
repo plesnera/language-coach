@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Edit2, Trash2, MessageSquare, Loader2, ImagePlus, Upload, X, Grid3X3 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { HandDrawnButton } from '../../components/HandDrawnButton';
 import { HandDrawnCard } from '../../components/HandDrawnCard';
 import { HandDrawnInput } from '../../components/HandDrawnInput';
 import { SquigglyLine } from '../../components/DoodleDecorations';
-
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : '';
+import { API_BASE } from '../../config/endpoints';
 
 interface Language { id: string; name: string; enabled: boolean; }
 interface Topic {
@@ -24,6 +22,7 @@ interface LibraryImage { id: string; filename: string; url: string; original_nam
 
 export function AdminTopicsPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const headers: Record<string, string> = {
     Authorization: `Bearer ${user?.token}`,
     'Content-Type': 'application/json',
@@ -39,6 +38,20 @@ export function AdminTopicsPage() {
   const [imageLibrary, setImageLibrary] = useState<LibraryImage[]>([]);
   const [showLibrary, setShowLibrary] = useState(false);
   const [uploading, setUploading] = useState(false);
+  
+  // AI Assistance
+  const [aiSourceContent, setAiSourceContent] = useState('');
+  const [aiLanguageId, setAiLanguageId] = useState('es');
+  const [aiDifficultyLevel, setAiDifficultyLevel] = useState('intermediate');
+  const [aiConversationDuration, setAiConversationDuration] = useState(15);
+  const [aiFocusSkillsText, setAiFocusSkillsText] = useState('speaking, listening');
+  const [aiConstraints, setAiConstraints] = useState('');
+  const [aiDraft, setAiDraft] = useState<any>(null);
+  const [aiInstruction, setAiInstruction] = useState('');
+  const [aiHistory, setAiHistory] = useState<string[]>([]);
+  const [isDrafting, setIsDrafting] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -47,12 +60,18 @@ export function AdminTopicsPage() {
         if (res.ok) {
           const langs: Language[] = await res.json();
           setLanguages(langs);
-          if (langs.length > 0) setSelectedLangId(langs[0].id);
+          const preferredLangId = searchParams.get('language_id');
+          const hasPreferredLanguage = preferredLangId
+            ? langs.some((lang) => lang.id === preferredLangId)
+            : false;
+          if (langs.length > 0) {
+            setSelectedLangId(hasPreferredLanguage ? preferredLangId : langs[0].id);
+          }
         }
       } catch (err) { console.error('Failed to load languages', err); }
       finally { setLoading(false); }
     })();
-  }, [user?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams, user?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTopics = useCallback(async () => {
     if (!selectedLangId) return;
@@ -92,13 +111,146 @@ export function AdminTopicsPage() {
     finally { setUploading(false); e.target.value = ''; }
   };
 
+  const handleSourceFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.txt') || name.endsWith('.md')) {
+      const text = await file.text();
+      setAiSourceContent(text.slice(0, 30000));
+      e.target.value = '';
+      return;
+    }
+    if (name.endsWith('.pdf')) {
+      setAiError('PDF upload is supported as a reference, but please paste extracted text for best results.');
+      setAiSourceContent((prev) => prev ? prev : `[PDF uploaded: ${file.name}] Please paste extracted text content below.`);
+    } else {
+      setAiError('Unsupported file type. Use TXT, MD, or PDF.');
+    }
+    e.target.value = '';
+  };
+
+  const parseFocusSkills = (value: string) =>
+    value.split(',').map((skill) => skill.trim()).filter(Boolean);
+
+  const handleGenerateDraft = async () => {
+    setAiError(null);
+    if (!aiSourceContent.trim()) {
+      setAiError('Add source content before generating a draft.');
+      return;
+    }
+    setIsDrafting(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/topics/ai/draft`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          source_content: aiSourceContent,
+          language_id: aiLanguageId,
+          conversation_duration_minutes: aiConversationDuration,
+          difficulty_level: aiDifficultyLevel,
+          focus_skills: parseFocusSkills(aiFocusSkillsText),
+          constraints: aiConstraints || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setAiError(data?.detail || 'Could not generate draft.');
+        return;
+      }
+      const data = await res.json();
+      setAiDraft(data);
+      setAiHistory((prev) => [...prev, 'Generated initial draft']);
+    } catch {
+      setAiError('Could not generate draft.');
+    } finally {
+      setIsDrafting(false);
+    }
+  };
+
+  const handleRefineDraft = async () => {
+    setAiError(null);
+    if (!aiDraft) {
+      setAiError('Generate a draft first.');
+      return;
+    }
+    if (!aiInstruction.trim()) {
+      setAiError('Add an instruction to refine the draft.');
+      return;
+    }
+    setIsRefining(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/topics/ai/refine`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          current_draft: aiDraft,
+          admin_instruction: aiInstruction,
+          conversation_summary: aiHistory.join('\n'),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setAiError(data?.detail || 'Could not refine draft.');
+        return;
+      }
+      const data = await res.json();
+      setAiDraft(data);
+      setAiHistory((prev) => [...prev, `Instruction: ${aiInstruction.trim()}`]);
+      setAiInstruction('');
+    } catch {
+      setAiError('Could not refine draft.');
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  const applyDraftToTopic = () => {
+    if (!aiDraft) return;
+    setCurrentTopic((prev) => ({
+      ...prev,
+      title: aiDraft.title || prev.title || '',
+      description: aiDraft.description || prev.description || '',
+      conversation_prompt: aiDraft.conversation_prompt || prev.conversation_prompt || '',
+    }));
+  };
+
   const handleOpenModal = (topic?: Topic) => {
     setCurrentTopic(topic ? { ...topic } : { language_id: selectedLangId ?? '', description: '', conversation_prompt: '' });
     setShowLibrary(false);
     loadImageLibrary();
+    // Reset AI state
+    setAiSourceContent('');
+    setAiLanguageId('es');
+    setAiDifficultyLevel('intermediate');
+    setAiConversationDuration(15);
+    setAiFocusSkillsText('speaking, listening');
+    setAiConstraints('');
+    setAiDraft(null);
+    setAiInstruction('');
+    setAiHistory([]);
+    setAiError(null);
     setIsModalOpen(true);
   };
-  const handleCloseModal = () => { setIsModalOpen(false); setCurrentTopic({}); };
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCurrentTopic({});
+    if (searchParams.has('edit')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('edit');
+      setSearchParams(next, { replace: true });
+    }
+  };
+
+  useEffect(() => {
+    if (isModalOpen) return;
+    const editTopicId = searchParams.get('edit');
+    if (!editTopicId) return;
+    const topicToEdit = topics.find((topic) => topic.id === editTopicId);
+    if (topicToEdit) {
+      handleOpenModal(topicToEdit);
+    }
+  }, [isModalOpen, searchParams, topics]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     setSaving(true);
@@ -189,6 +341,123 @@ export function AdminTopicsPage() {
               <HandDrawnInput label="Topic Title" value={currentTopic.title || ''} onChange={(e) => setCurrentTopic({ ...currentTopic, title: e.target.value })} placeholder="e.g., Travel" />
               <HandDrawnInput label="Description" multiline rows={2} value={currentTopic.description || ''} onChange={(e) => setCurrentTopic({ ...currentTopic, description: e.target.value })} placeholder="Brief description visible to users..." />
               <HandDrawnInput label="Conversation Prompt (System)" multiline rows={4} value={currentTopic.conversation_prompt || ''} onChange={(e) => setCurrentTopic({ ...currentTopic, conversation_prompt: e.target.value })} placeholder="Instructions for the AI..." className="font-mono text-sm" />
+
+              <div className="border-t-2 border-dashed border-gray-200 pt-4">
+                <h3 className="font-heading font-bold text-lg mb-3">AI Assist Topic Builder</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Upload an article or text to automatically generate a conversation topic.
+                </p>
+                <div className="space-y-3">
+                  <div className="border-2 border-dashed border-gray-300 hand-drawn-border-alt p-4 text-center">
+                    <div className="mb-3">
+                      <label className="inline-flex items-center gap-2 text-sm font-bold px-4 py-2 border-2 border-[#1A1A1A] hand-drawn-border-alt cursor-pointer hover:bg-gray-100 transition-colors">
+                        <Upload size={16} /> Upload Article (TXT/MD/PDF)
+                        <input
+                          type="file"
+                          accept=".txt,.md,.pdf"
+                          onChange={handleSourceFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2">or paste text directly:</p>
+                    <textarea
+                      className="w-full bg-white border-2 border-[#1A1A1A] hand-drawn-border-alt px-3 py-2 text-sm"
+                      rows={3}
+                      value={aiSourceContent}
+                      onChange={(e) => setAiSourceContent(e.target.value)}
+                      placeholder="Paste source material for this topic..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <HandDrawnInput
+                      label="Language ID"
+                      value={aiLanguageId}
+                      onChange={(e) => setAiLanguageId(e.target.value)}
+                      placeholder="es"
+                    />
+                    <HandDrawnInput
+                      label="Difficulty Level"
+                      value={aiDifficultyLevel}
+                      onChange={(e) => setAiDifficultyLevel(e.target.value)}
+                      placeholder="intermediate"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <HandDrawnInput
+                      label="Conversation Duration (minutes)"
+                      type="number"
+                      value={String(aiConversationDuration)}
+                      onChange={(e) => setAiConversationDuration(Number(e.target.value || 15))}
+                      placeholder="15"
+                    />
+                    <HandDrawnInput
+                      label="Focus Skills (comma separated)"
+                      value={aiFocusSkillsText}
+                      onChange={(e) => setAiFocusSkillsText(e.target.value)}
+                      placeholder="speaking, listening"
+                    />
+                  </div>
+
+                  <HandDrawnInput
+                    label="Constraints (optional)"
+                    value={aiConstraints}
+                    onChange={(e) => setAiConstraints(e.target.value)}
+                    placeholder="Keep vocabulary simple, focus on travel phrases"
+                  />
+
+                  <div className="flex flex-wrap gap-2">
+                    <HandDrawnButton
+                      variant="outline"
+                      onClick={handleGenerateDraft}
+                      disabled={isDrafting}
+                    >
+                      {isDrafting ? 'Generating…' : 'Generate Draft'}
+                    </HandDrawnButton>
+                    <HandDrawnButton
+                      variant="outline"
+                      onClick={applyDraftToTopic}
+                      disabled={!aiDraft}
+                    >
+                      Apply Draft to Topic
+                    </HandDrawnButton>
+                  </div>
+
+                  {aiDraft && (
+                    <div className="mt-2 p-3 border-2 border-dashed border-gray-300 hand-drawn-border-alt bg-white">
+                      <p className="text-xs text-gray-500 mb-1">Current AI Draft</p>
+                      <p className="text-sm font-bold">{aiDraft.title || '(Untitled)'}</p>
+                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">{aiDraft.description}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-bold mb-1">Refine Instruction</label>
+                    <textarea
+                      className="w-full bg-white border-2 border-[#1A1A1A] hand-drawn-border-alt px-3 py-2 text-sm"
+                      rows={2}
+                      value={aiInstruction}
+                      onChange={(e) => setAiInstruction(e.target.value)}
+                      placeholder="e.g., make it more beginner-friendly and add cultural notes"
+                    />
+                    <div className="mt-2">
+                      <HandDrawnButton
+                        variant="outline"
+                        onClick={handleRefineDraft}
+                        disabled={isRefining || !aiDraft}
+                      >
+                        {isRefining ? 'Refining…' : 'Refine Draft'}
+                      </HandDrawnButton>
+                    </div>
+                  </div>
+
+                  {aiError && (
+                    <p className="text-xs text-[#DC2626] font-medium">{aiError}</p>
+                  )}
+                </div>
+              </div>
 
               <div className="border-t-2 border-dashed border-gray-200 pt-4">
                 <h3 className="font-heading font-bold text-lg mb-3 flex items-center gap-2"><ImagePlus size={20} className="text-[#F59E0B]" /> Topic Image</h3>

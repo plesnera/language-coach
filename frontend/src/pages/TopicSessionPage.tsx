@@ -2,10 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import SessionPage from "../components/session/SessionPage";
-
-const API_BASE = import.meta.env.DEV
-  ? `http://${window.location.hostname}:8000`
-  : "";
+import { API_BASE } from "../config/endpoints";
 
 interface TopicData {
   id: string;
