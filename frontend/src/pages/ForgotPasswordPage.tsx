@@ -29,7 +29,7 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/">
@@ -42,9 +42,9 @@ export function ForgotPasswordPage() {
         <HandDrawnCard rotate="none" className="mb-8">
           {!isSubmitted ?
           <>
-              <h2 className="font-heading text-3xl font-bold mb-2 text-center">
+              <h1 className="font-heading text-3xl font-bold mb-2 text-center">
                 Forgot password?
-              </h2>
+              </h1>
               <p className="text-center text-gray-600 mb-6">
                 No worries! Enter your email and we'll send you a reset link.
               </p>

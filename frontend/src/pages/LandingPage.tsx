@@ -162,11 +162,7 @@ export function LandingPage() {
             <motion.div
               className="text-center mb-16 relative inline-block left-1/2 -translate-x-1/2"
               initial="hidden"
-              whileInView="visible"
-              viewport={{
-                once: true,
-                margin: '-100px'
-              }}
+              animate="visible"
               variants={fadeInUp}>
 
               <h2 className="font-heading text-4xl md:text-5xl font-bold">
@@ -178,11 +174,7 @@ export function LandingPage() {
             <motion.div
               className="grid grid-cols-1 md:grid-cols-3 gap-8 relative"
               initial="hidden"
-              whileInView="visible"
-              viewport={{
-                once: true,
-                margin: '-100px'
-              }}
+              animate="visible"
               variants={staggerContainer}>
 
               {/* Connecting line for desktop */}
@@ -244,11 +236,7 @@ export function LandingPage() {
           <motion.div
             className="grid grid-cols-1 lg:grid-cols-3 gap-8"
             initial="hidden"
-            whileInView="visible"
-            viewport={{
-              once: true,
-              margin: '-100px'
-            }}
+            animate="visible"
             variants={staggerContainer}>
 
             {[
@@ -284,7 +272,7 @@ export function LandingPage() {
                     {feature.desc}
                   </p>
                   <Link
-                  to="/signup"
+                  to="/intro"
                   className="inline-flex items-center font-bold text-[#DC2626] hover:text-[#1A1A1A] transition-colors group">
 
                     Try it{' '}
@@ -339,11 +327,7 @@ export function LandingPage() {
           <motion.div
             className="text-center mb-16"
             initial="hidden"
-            whileInView="visible"
-            viewport={{
-              once: true,
-              margin: '-100px'
-            }}
+            animate="visible"
             variants={fadeInUp}>
 
             <h2 className="font-heading text-4xl md:text-5xl font-bold flex items-center justify-center gap-4">
@@ -356,11 +340,7 @@ export function LandingPage() {
           <motion.div
             className="grid grid-cols-1 md:grid-cols-3 gap-8"
             initial="hidden"
-            whileInView="visible"
-            viewport={{
-              once: true,
-              margin: '-100px'
-            }}
+            animate="visible"
             variants={staggerContainer}>
 
             {[
@@ -428,11 +408,7 @@ export function LandingPage() {
           <motion.div
             className="max-w-3xl mx-auto relative z-10"
             initial="hidden"
-            whileInView="visible"
-            viewport={{
-              once: true,
-              margin: '-100px'
-            }}
+            animate="visible"
             variants={staggerContainer}>
 
             <motion.h2
@@ -496,15 +472,15 @@ export function LandingPage() {
             </p>
           </div>
           <div className="flex gap-6 text-sm font-medium text-gray-600">
-            <a href="#" className="hover:text-[#DC2626] transition-colors">
+            <Link to="/about" className="hover:text-[#DC2626] transition-colors">
               About
-            </a>
-            <a href="#" className="hover:text-[#DC2626] transition-colors">
+            </Link>
+            <Link to="/privacy" className="hover:text-[#DC2626] transition-colors">
               Privacy
-            </a>
-            <a href="#" className="hover:text-[#DC2626] transition-colors">
+            </Link>
+            <Link to="/terms" className="hover:text-[#DC2626] transition-colors">
               Terms
-            </a>
+            </Link>
           </div>
         </div>
       </footer>
