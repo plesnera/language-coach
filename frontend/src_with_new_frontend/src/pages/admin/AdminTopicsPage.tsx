@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, MessageSquare } from 'lucide-react';
+import { Plus, Edit2, Trash2, MessageSquare, Wand2 } from 'lucide-react';
 import { HandDrawnButton } from '../../components/HandDrawnButton';
 import { HandDrawnCard } from '../../components/HandDrawnCard';
 import { HandDrawnInput } from '../../components/HandDrawnInput';
@@ -10,6 +10,15 @@ interface Topic {
   title: string;
   description: string;
   conversation_prompt: string;
+}
+
+interface TopicDraftRequest {
+  source_content: string;
+  language_id: string;
+  conversation_duration_minutes: number;
+  difficulty_level: string;
+  focus_skills: string[];
+  constraints?: string;
 }
 const initialTopics: Topic[] = [
 {
@@ -38,6 +47,8 @@ export function AdminTopicsPage() {
   const [topics, setTopics] = useState<Topic[]>(initialTopics);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentTopic, setCurrentTopic] = useState<Partial<Topic>>({});
+  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
+  const [sourceContent, setSourceContent] = useState('');
   const handleOpenModal = (topic?: Topic) => {
     if (topic) {
       setCurrentTopic(topic);
@@ -46,7 +57,36 @@ export function AdminTopicsPage() {
         language_id: 'All'
       });
     }
+    setSourceContent('');
     setIsModalOpen(true);
+  };
+
+  const handleGenerateDraft = async () => {
+    if (!sourceContent.trim()) return;
+    
+    setIsGeneratingDraft(true);
+    try {
+      // In a real implementation, this would call the backend AI service
+      // POST /api/admin/topics/ai/draft
+      
+      // Mock response showing the concept
+      const mockDraft = {
+        title: `AI Draft: ${sourceContent.substring(0, 30)}...`,
+        description: `Engaging conversation topic based on: ${sourceContent.substring(0, 50)}...`,
+        conversation_prompt: `You are a conversation partner. Discuss this topic based on the provided content: ${sourceContent.substring(0, 80)}...`
+      };
+      
+      setCurrentTopic(prev => ({
+        ...prev,
+        ...mockDraft,
+        language_id: prev.language_id || 'All'
+      }));
+      
+    } catch (error) {
+      console.error('AI draft generation failed:', error);
+    } finally {
+      setIsGeneratingDraft(false);
+    }
   };
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -214,6 +254,46 @@ export function AdminTopicsPage() {
               }
               placeholder="Instructions for the AI..."
               className="font-mono text-sm" />
+
+            <div className="border-t-2 border-dashed border-gray-200 pt-6 mt-6">
+              <h3 className="font-heading font-bold text-lg mb-4 flex items-center gap-2">
+                <Wand2 size={20} className="text-[#F59E0B]" /> AI Topic Generator
+              </h3>
+
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <label className="font-heading font-bold text-[#1A1A1A] text-lg">
+                    Source Content
+                  </label>
+                  <textarea
+                    className="w-full bg-transparent border-2 border-[#1A1A1A] hand-drawn-border-alt px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/50"
+                    rows={4}
+                    value={sourceContent}
+                    onChange={(e) => setSourceContent(e.target.value)}
+                    placeholder="Paste article, notes, or any text to generate a topic..."
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGenerateDraft}
+                  disabled={isGeneratingDraft || !sourceContent.trim()}
+                  className="text-sm font-bold px-4 py-2 border-2 border-[#1A1A1A] bg-[#F59E0B]/20 hand-drawn-border-pill hover:bg-[#F59E0B]/30 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+
+                  {isGeneratingDraft ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-[#1A1A1A] border-t-transparent rounded-full animate-spin"></span>
+                      Generating Draft...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 size={16} />
+                      Generate AI Draft
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
 
             </div>
 

@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LandingPage } from './pages/LandingPage';
+import { SimpleLandingPage } from './pages/SimpleLandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -20,7 +20,7 @@ export function App() {
     <BrowserRouter>
       <Routes>
         {/* Public / User Routes */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<SimpleLandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

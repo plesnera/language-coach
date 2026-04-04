@@ -109,25 +109,41 @@ export function AdminLessonsPage() {
       setLessons(newLessons);
     }
   };
-  const handleTranscribe = () => {
+  const handleTranscribe = async () => {
+    if (!currentLesson.source_audio_ref) return;
+    
     setIsTranscribing(true);
-    setTimeout(() => {
+    try {
+      // In a real implementation, this would call the backend API
+      // For now, we'll use the mock to show the concept
+      const mockTranscript = `Transcribed: This is a mock transcription of ${currentLesson.source_audio_ref}`;
       setCurrentLesson((prev) => ({
         ...prev,
-        source_transcript: 'Mock transcribed text from audio...'
+        source_transcript: mockTranscript
       }));
+    } catch (error) {
+      console.error('Transcription failed:', error);
+    } finally {
       setIsTranscribing(false);
-    }, 1500);
+    }
   };
-  const handleSummarise = () => {
+
+  const handleSummarise = async () => {
+    if (!currentLesson.source_transcript) return;
+    
     setIsSummarising(true);
-    setTimeout(() => {
+    try {
+      // In a real implementation, this would call the backend AI summarization
+      const mockSummary = `Summarized objective based on transcript: Practice ${currentLesson.title || 'the lesson'}`;
       setCurrentLesson((prev) => ({
         ...prev,
-        objective: 'Mock summarized objective based on transcript.'
+        objective: mockSummary
       }));
+    } catch (error) {
+      console.error('Summarization failed:', error);
+    } finally {
       setIsSummarising(false);
-    }, 1500);
+    }
   };
   return (
     <div>
