@@ -28,6 +28,7 @@ import { FreestylePage } from "./pages/FreestylePage";
 import FreestyleSessionPage from "./pages/FreestyleSessionPage";
 import HistoryPage from "./pages/HistoryPage";
 import { IntroFlowPage } from "./pages/IntroFlowPage";
+import { AboutPage, PrivacyPage, TermsPage } from "./pages/StaticPages";
 import GuestIntroSessionPage from "./pages/GuestIntroSessionPage";
 import { AdminLayout } from "./components/AdminLayout";
 import { AdminMainPage } from "./pages/admin/AdminMainPage";
@@ -144,6 +145,9 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
 
       {/* Authenticated app routes */}
       <Route path="/learn" element={<LearnPage />} />

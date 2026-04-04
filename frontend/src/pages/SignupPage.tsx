@@ -46,7 +46,7 @@ export function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decorations */}
       <GlobeDoodle className="absolute top-10 right-20 w-32 h-32 text-gray-200 rotate-12 hidden md:block" />
       <SpeechBubble className="absolute bottom-10 left-20 w-24 h-24 text-[#F59E0B] opacity-20 -rotate-12 hidden md:block" />

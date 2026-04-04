@@ -6,6 +6,27 @@ import { HandDrawnButton } from '../components/HandDrawnButton';
 import { BookDoodle, ChatBubbleDoodle } from '../components/DoodleDecorations';
 import { useAuth } from '../contexts/AuthContext';
 
+function friendlyAuthError(err: unknown): string {
+  if (err && typeof err === 'object' && 'code' in err) {
+    const code = (err as { code: string }).code;
+    switch (code) {
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential':
+        return 'Incorrect email or password.';
+      case 'auth/invalid-email':
+        return 'Please enter a valid email address.';
+      case 'auth/user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'auth/too-many-requests':
+        return 'Too many failed attempts. Please try again later.';
+      default:
+        return 'Login failed. Please try again.';
+    }
+  }
+  return 'Login failed. Please try again.';
+}
+
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,14 +51,14 @@ export function LoginPage() {
       await login(email, password);
       navigate(redirectTarget);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(friendlyAuthError(err));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decorations */}
       <BookDoodle className="absolute top-20 left-10 w-32 h-32 text-gray-200 -rotate-12 hidden md:block" />
       <ChatBubbleDoodle className="absolute bottom-20 right-10 w-40 h-40 text-gray-200 rotate-12 hidden md:block" />

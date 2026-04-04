@@ -38,6 +38,10 @@ const LANGUAGE_OPTIONS: LanguageOption[] = [
   { id: "french", name: "French", flag: "🇫🇷" },
   { id: "japanese", name: "Japanese", flag: "🇯🇵" },
   { id: "german", name: "German", flag: "🇩🇪" },
+  { id: "italian", name: "Italian", flag: "🇮🇹" },
+  { id: "portuguese", name: "Portuguese", flag: "🇧🇷" },
+  { id: "korean", name: "Korean", flag: "🇰🇷" },
+  { id: "chinese", name: "Chinese", flag: "🇨🇳" },
 ];
 
 const GOAL_OPTIONS: GoalOption[] = [
