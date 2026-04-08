@@ -12,23 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-terraform {
-  required_version = ">= 1.0.0"
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 7.13.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.7.0"
-    }
-  }
-}
+# ====================================================================
+# Firestore Daily Backup Schedule
+# ====================================================================
 
-provider "google" {
-  alias                 = "dev_billing_override"
-  billing_project       = var.dev_project_id
-  region                = var.region
-  user_project_override = true
+resource "google_firestore_backup_schedule" "daily" {
+  for_each = local.deploy_project_ids
+  project  = each.value
+  database = google_firestore_database.default[each.key].name
+
+  retention = "${var.firestore_backup_retention_days * 24 * 3600}s"
+
+  daily_recurrence {}
+
+  depends_on = [google_firestore_database.default]
 }

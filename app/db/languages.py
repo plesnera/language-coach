@@ -80,18 +80,24 @@ def update(language_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
     """Update selected fields on a language document."""
     db = get_firestore_client()
     ref = db.collection(COLLECTION).document(language_id)
-    if not ref.get().exists:
+    snap = ref.get()
+    if not snap.exists:
         return None
     fields["updated_at"] = datetime.now(timezone.utc)
     ref.update(fields)
-    return _doc_to_dict(ref.get())
+    # Merge locally instead of a second round-trip
+    data = snap.to_dict() or {}
+    data.update(fields)
+    data["id"] = ref.id
+    return data
 
 
 def delete(language_id: str) -> bool:
     """Delete a language document."""
     db = get_firestore_client()
     ref = db.collection(COLLECTION).document(language_id)
-    if not ref.get().exists:
+    snap = ref.get()
+    if not snap.exists:
         return False
     ref.delete()
     return True

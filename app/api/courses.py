@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.auth.dependencies import get_current_user
 from app.db import courses as courses_repo
+from app.services import cache
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
 
@@ -31,7 +32,13 @@ def list_courses(
     language_id: str = Query(...),
     _user: dict[str, Any] = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
-    return courses_repo.list_by_language(language_id)
+    cache_key = f"courses:lang:{language_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    result = courses_repo.list_by_language(language_id)
+    cache.set(cache_key, result, ttl=120)
+    return result
 
 
 @router.get("/{course_id}/lessons")

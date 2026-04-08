@@ -44,6 +44,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { HandDrawnCard } from "./components/HandDrawnCard";
 import { HandDrawnButton } from "./components/HandDrawnButton";
 import { SquigglyLine } from "./components/DoodleDecorations";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { WS_BASE_URL } from "./config/endpoints";
 
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -136,53 +137,71 @@ function ProgressiveSession({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/intro" element={<IntroFlowPage />} />
-      <Route path="/intro/session" element={
-        <GuestSession><GuestIntroSessionPage /></GuestSession>
-      } />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/about" element={<AboutPage />} />
-      <Route path="/privacy" element={<PrivacyPage />} />
-      <Route path="/terms" element={<TermsPage />} />
+    <ErrorBoundary>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/intro" element={<IntroFlowPage />} />
+        <Route path="/intro/session" element={
+          <GuestSession><GuestIntroSessionPage /></GuestSession>
+        } />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
 
-      {/* Authenticated app routes */}
-      <Route path="/learn" element={<LearnPage />} />
-      <Route path="/learn/session/:courseId/:lessonId" element={
-        <AuthenticatedSession><LessonSessionPage /></AuthenticatedSession>
-      } />
-      <Route path="/topics" element={<TopicPage />} />
-      <Route path="/topics/:id" element={
-        <AuthenticatedSession><TopicSessionPage /></AuthenticatedSession>
-      } />
-      <Route path="/freestyle" element={<FreestylePage />} />
-      <Route path="/freestyle/session" element={
-        <ProgressiveSession><FreestyleSessionPage /></ProgressiveSession>
-      } />
-      <Route path="/history" element={
-        <RequireAuth><HistoryPage /></RequireAuth>
-      } />
+        {/* Authenticated app routes */}
+        <Route path="/learn" element={
+          <ErrorBoundary><LearnPage /></ErrorBoundary>
+        } />
+        <Route path="/learn/session/:courseId/:lessonId" element={
+          <ErrorBoundary>
+            <AuthenticatedSession><LessonSessionPage /></AuthenticatedSession>
+          </ErrorBoundary>
+        } />
+        <Route path="/topics" element={
+          <ErrorBoundary><TopicPage /></ErrorBoundary>
+        } />
+        <Route path="/topics/:id" element={
+          <ErrorBoundary>
+            <AuthenticatedSession><TopicSessionPage /></AuthenticatedSession>
+          </ErrorBoundary>
+        } />
+        <Route path="/freestyle" element={
+          <ErrorBoundary><FreestylePage /></ErrorBoundary>
+        } />
+        <Route path="/freestyle/session" element={
+          <ErrorBoundary>
+            <ProgressiveSession><FreestyleSessionPage /></ProgressiveSession>
+          </ErrorBoundary>
+        } />
+        <Route path="/history" element={
+          <ErrorBoundary>
+            <RequireAuth><HistoryPage /></RequireAuth>
+          </ErrorBoundary>
+        } />
 
-      {/* Admin routes */}
-      <Route path="/admin" element={
-        <RequireAdmin><AdminLayout /></RequireAdmin>
-      }>
-        <Route index element={<AdminMainPage />} />
-        <Route path="languages/:languageId" element={<AdminLanguagePage />} />
-        <Route path="courses" element={<AdminCoursesPage />} />
-        <Route path="courses/:courseId/lessons" element={<AdminLessonsPage />} />
-        <Route path="topics" element={<AdminTopicsPage />} />
-        <Route path="prompts" element={<AdminPromptsPage />} />
-        <Route path="users" element={<AdminUsersPage />} />
-      </Route>
+        {/* Admin routes */}
+        <Route path="/admin" element={
+          <ErrorBoundary>
+            <RequireAdmin><AdminLayout /></RequireAdmin>
+          </ErrorBoundary>
+        }>
+          <Route index element={<AdminMainPage />} />
+          <Route path="languages/:languageId" element={<AdminLanguagePage />} />
+          <Route path="courses" element={<AdminCoursesPage />} />
+          <Route path="courses/:courseId/lessons" element={<AdminLessonsPage />} />
+          <Route path="topics" element={<AdminTopicsPage />} />
+          <Route path="prompts" element={<AdminPromptsPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+        </Route>
 
-      {isDevelopment && <Route path="/debug" element={<DebugPage />} />}
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+        {isDevelopment && <Route path="/debug" element={<DebugPage />} />}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
 

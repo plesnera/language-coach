@@ -12,23 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-terraform {
-  required_version = ">= 1.0.0"
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 7.13.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.7.0"
-    }
+# ====================================================================
+# Outputs
+# ====================================================================
+
+output "redis_host" {
+  description = "Redis instance host per environment"
+  value = {
+    for key, instance in google_redis_instance.cache : key => instance.host
   }
 }
 
-provider "google" {
-  alias                 = "dev_billing_override"
-  billing_project       = var.dev_project_id
-  region                = var.region
-  user_project_override = true
+output "redis_port" {
+  description = "Redis instance port per environment"
+  value = {
+    for key, instance in google_redis_instance.cache : key => instance.port
+  }
 }

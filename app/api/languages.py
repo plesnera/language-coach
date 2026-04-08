@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends
 
 from app.auth.dependencies import get_current_user
 from app.db import languages as lang_repo
+from app.services import cache
 
 router = APIRouter(prefix="/api/languages", tags=["languages"])
 
@@ -31,4 +32,10 @@ def list_languages(
     _user: dict[str, Any] = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """Return all enabled languages."""
-    return lang_repo.list_enabled()
+    cache_key = "languages:enabled"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    result = lang_repo.list_enabled()
+    cache.set(cache_key, result, ttl=300)
+    return result

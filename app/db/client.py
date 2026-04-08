@@ -32,6 +32,9 @@ def get_firestore_client() -> Any:
 
     If ``FIRESTORE_EMULATOR_HOST`` is set, the SDK connects to the
     Firestore emulator automatically.
+
+    If ``DEV_FIRESTORE_PROJECT_ID`` is set **and** no emulator is running,
+    it overrides the project to point at a real GCP dev database.
     """
     global _client
     if _client is None:
@@ -40,6 +43,12 @@ def get_firestore_client() -> Any:
         project = os.environ.get("GOOGLE_CLOUD_PROJECT_ID") or os.environ.get(
             "GOOGLE_CLOUD_PROJECT"
         )
+
+        # Allow pointing at a real Firestore dev project when not using the emulator
+        dev_project = os.environ.get("DEV_FIRESTORE_PROJECT_ID")
+        if dev_project and not os.environ.get("FIRESTORE_EMULATOR_HOST"):
+            project = dev_project
+
         if project:
             os.environ["GOOGLE_CLOUD_PROJECT_ID"] = project
             os.environ["GOOGLE_CLOUD_PROJECT"] = project

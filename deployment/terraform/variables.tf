@@ -132,3 +132,61 @@ variable "feedback_logs_filter" {
   default     = "jsonPayload.log_type=\"feedback\" jsonPayload.service_name=\"language-coach\""
 }
 
+# ── Monitoring & Alerts ──────────────────────────────────────────────────────
+
+variable "alert_email" {
+  type        = string
+  description = "Email address for monitoring alert notifications. Leave empty to disable alerts."
+  default     = ""
+}
+
+# ── Secrets Management ──────────────────────────────────────────────────────
+
+variable "secret_ids" {
+  type        = map(string)
+  description = "Map of secret name to initial value placeholder. Values should be set via `terraform.tfvars` or CI/CD."
+  default     = {}
+}
+
+# ── Firestore Production ────────────────────────────────────────────────────
+
+variable "firestore_backup_schedule" {
+  type        = string
+  description = "Cron schedule for Firestore daily backups (in Cloud Scheduler format)."
+  default     = "0 2 * * *" # 2:00 AM daily
+}
+
+variable "firestore_backup_retention_days" {
+  type        = number
+  description = "Number of days to retain Firestore backups."
+  default     = 30
+}
+
+# ── Redis / Memorystore ─────────────────────────────────────────────────────
+
+variable "redis_tier" {
+  type        = string
+  description = "Memorystore Redis tier (BASIC or STANDARD_HA)."
+  default     = "BASIC"
+}
+
+variable "redis_memory_size_gb" {
+  type        = number
+  description = "Memorystore Redis memory size in GB."
+  default     = 1
+}
+
+# ── WAF & CDN ───────────────────────────────────────────────────────────────
+
+variable "waf_enabled" {
+  type        = bool
+  description = "Enable Cloud Armor WAF security policies."
+  default     = true
+}
+
+variable "cdn_enabled" {
+  type        = bool
+  description = "Enable Cloud CDN for static asset caching."
+  default     = true
+}
+

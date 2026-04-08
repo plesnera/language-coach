@@ -79,19 +79,26 @@ def create(
 def update(course_id: str, fields: dict[str, Any]) -> dict[str, Any] | None:
     db = get_firestore_client()
     ref = db.collection(COLLECTION).document(course_id)
-    if not ref.get().exists:
+    snap = ref.get()
+    if not snap.exists:
         return None
     fields["updated_at"] = datetime.now(timezone.utc)
     ref.update(fields)
-    return _doc_to_dict(ref.get())
+    # Merge locally instead of a second round-trip
+    data = snap.to_dict() or {}
+    data.update(fields)
+    data["id"] = ref.id
+    return data
 
 
 def delete(course_id: str) -> bool:
     """Delete a course and all its lessons."""
     db = get_firestore_client()
     ref = db.collection(COLLECTION).document(course_id)
-    if not ref.get().exists:
+    snap = ref.get()
+    if not snap.exists:
         return False
+    # batch_delete_lessons already deletes the course document
     batch_delete_lessons(course_id)
     return True
 
@@ -174,11 +181,16 @@ def update_lesson(
         .collection(LESSONS_SUB)
         .document(lesson_id)
     )
-    if not ref.get().exists:
+    snap = ref.get()
+    if not snap.exists:
         return None
     fields["updated_at"] = datetime.now(timezone.utc)
     ref.update(fields)
-    return _doc_to_dict(ref.get())
+    # Merge locally instead of a second round-trip
+    data = snap.to_dict() or {}
+    data.update(fields)
+    data["id"] = ref.id
+    return data
 
 
 def batch_update_lessons(course_id: str, updates: list[dict[str, Any]]) -> None:
@@ -220,7 +232,8 @@ def delete_lesson(course_id: str, lesson_id: str) -> bool:
         .collection(LESSONS_SUB)
         .document(lesson_id)
     )
-    if not ref.get().exists:
+    snap = ref.get()
+    if not snap.exists:
         return False
     ref.delete()
     return True
