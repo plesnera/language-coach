@@ -27,7 +27,6 @@ import google.auth
 import vertexai
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, WebSocket
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from google.cloud import logging as google_cloud_logging
@@ -110,23 +109,31 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+# Security headers + CORS (environment-aware: permissive in dev, strict in prod)
+from app.app_utils.security import configure_security  # noqa: E402
+
+configure_security(app)
+
+# Rate limiting exception handler (returns HTTP 429 for rate-limited requests)
+from slowapi import _rate_limit_exceeded_handler  # noqa: E402
+from slowapi.errors import RateLimitExceeded  # noqa: E402
+
+app.state.limiter = __import__("app.auth.router", fromlist=["limiter"]).limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── Register REST API routers ───────────────────────────────────────────────
 from app.api.admin import router as admin_router  # noqa: E402
 from app.api.conversations import router as conversations_router  # noqa: E402
 from app.api.courses import router as courses_router  # noqa: E402
 from app.api.documents import router as documents_router  # noqa: E402
+from app.api.health import router as health_router  # noqa: E402
 from app.api.languages import router as languages_router  # noqa: E402
 from app.api.progress import router as progress_router  # noqa: E402
 from app.api.topics import router as topics_router  # noqa: E402
 from app.auth.router import router as auth_router  # noqa: E402
 
+app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(languages_router)
 app.include_router(courses_router)

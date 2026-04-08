@@ -62,6 +62,8 @@ variable "app_sa_roles" {
     "roles/cloudtrace.agent",
     "roles/storage.admin",
     "roles/serviceusage.serviceUsageConsumer",
+    "roles/monitoring.viewer",
+    "roles/secretmanager.secretAccessor",
   ]
 }
 
@@ -130,5 +132,35 @@ variable "feedback_logs_filter" {
   type        = string
   description = "Log Sink filter for capturing feedback data. Captures logs where the `log_type` field is `feedback`."
   default     = "jsonPayload.log_type=\"feedback\" jsonPayload.service_name=\"language-coach\""
+}
+
+# ── Monitoring & Alerts ──────────────────────────────────────────────────────
+
+variable "alert_email" {
+  type        = string
+  description = "Email address for monitoring alert notifications. Leave empty to disable alerts."
+  default     = ""
+}
+
+# ── Secrets Management ──────────────────────────────────────────────────────
+
+variable "secret_ids" {
+  type        = map(string)
+  description = "Map of secret name to initial value placeholder. Values should be set via `terraform.tfvars` or CI/CD."
+  default     = {}
+}
+
+# ── Firestore Production ────────────────────────────────────────────────────
+
+variable "firestore_backup_schedule" {
+  type        = string
+  description = "Cron schedule for Firestore daily backups (in Cloud Scheduler format)."
+  default     = "0 2 * * *"  # 2:00 AM daily
+}
+
+variable "firestore_backup_retention_days" {
+  type        = number
+  description = "Number of days to retain Firestore backups."
+  default     = 30
 }
 
