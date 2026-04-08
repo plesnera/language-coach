@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Trash2, BookOpen, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { HandDrawnButton } from '../../components/HandDrawnButton';
@@ -25,6 +25,7 @@ interface Course {
 export function AdminCoursesPage() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const headers: Record<string, string> = {
     Authorization: `Bearer ${user?.token}`,
     'Content-Type': 'application/json',
@@ -111,7 +112,7 @@ export function AdminCoursesPage() {
           }),
         });
       } else {
-        await fetch(`${API_BASE}/api/admin/courses`, {
+        const response = await fetch(`${API_BASE}/api/admin/courses`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -121,6 +122,14 @@ export function AdminCoursesPage() {
             sort_order: courses.length,
           }),
         });
+        
+        if (response.ok) {
+          const newCourse = await response.json();
+          // Redirect to the lessons page for the newly created course
+          handleCloseModal();
+          navigate(`/admin/courses/${newCourse.id}/lessons`);
+          return;
+        }
       }
       await loadCourses();
       handleCloseModal();
@@ -180,6 +189,14 @@ export function AdminCoursesPage() {
         </HandDrawnButton>
       </div>
 
+      {/* Hierarchy explanation */}
+      <HandDrawnCard className="mb-6 bg-[#F59E0B]/10 border-[#F59E0B] border-2">
+        <p className="text-sm text-gray-700">
+          <strong>Courses</strong> are containers that organize your lessons. Each course can contain multiple lessons.
+          Click a course title or the <BookOpen className="inline w-4 h-4" /> icon to manage its lessons.
+        </p>
+      </HandDrawnCard>
+
       {/* Language filter */}
       {languages.length > 1 && (
         <div className="mb-6 flex flex-wrap gap-2">
@@ -220,10 +237,13 @@ export function AdminCoursesPage() {
                   <td className="p-4">
                     <Link
                       to={`/admin/courses/${course.id}/lessons`}
-                      className="font-bold hover:text-[#DC2626] flex items-center gap-2"
+                      className="font-bold hover:text-[#DC2626] flex items-center gap-2 group"
                     >
-                      <BookOpen size={16} className="text-gray-400" />
+                      <BookOpen size={16} className="text-gray-400 group-hover:text-[#DC2626]" />
                       {course.title}
+                      <span className="ml-2 text-xs bg-[#F59E0B] text-white px-2 py-0.5 rounded-full font-medium">
+                        Manage Lessons
+                      </span>
                     </Link>
                   </td>
                   <td className="p-4 text-gray-600 text-sm max-w-xs truncate">

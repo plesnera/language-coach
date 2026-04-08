@@ -19,6 +19,8 @@ export interface SessionPageProps {
   systemContext?: string;
   /** Extra content rendered above the audio controls (e.g. lesson info, topic card) */
   children?: React.ReactNode;
+  /** Optional content rendered below the audio controls (e.g. upsell, additional info) */
+  upsellContent?: React.ReactNode;
 }
 
 const SessionPage: React.FC<SessionPageProps> = ({
@@ -27,6 +29,7 @@ const SessionPage: React.FC<SessionPageProps> = ({
   backTo = "/learn",
   systemContext,
   children,
+  upsellContent,
 }) => {
   const [isTalking, setIsTalking] = useState(false);
   const { client, connected, connect } = useLiveAPIContext();
@@ -72,6 +75,8 @@ const SessionPage: React.FC<SessionPageProps> = ({
       <div className="session-controls">
         <AudioController isTalking={isTalking} onTalkStateChange={setIsTalking} />
       </div>
+
+      {upsellContent && <div className="session-upsell">{upsellContent}</div>}
     </div>
   );
 };

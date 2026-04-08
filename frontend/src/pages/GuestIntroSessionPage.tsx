@@ -58,69 +58,75 @@ const GuestIntroSessionPage: React.FC = () => {
     "- Topic chats based on user-uploaded content",
   ].join("\n");
 
+  // Upsell content that will be rendered below the voice interface
+  const upsellContent = (
+    <div className="space-y-4 max-w-4xl mx-auto mt-8">
+      <HandDrawnCard rotate="right">
+        <h3 className="font-heading text-xl font-bold mb-3">
+          What you unlock by signing up
+        </h3>
+        <ul className="space-y-2">
+          <li className="flex items-start gap-2">
+            <CheckCircle2
+              size={18}
+              className="text-[#1A1A1A] mt-0.5 shrink-0"
+              aria-hidden="true"
+            />
+            <span>A personalized curriculum adapted to your level</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckCircle2
+              size={18}
+              className="text-[#1A1A1A] mt-0.5 shrink-0"
+              aria-hidden="true"
+            />
+            <span>Progress tracking so you can see measurable improvement</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckCircle2
+              size={18}
+              className="text-[#1A1A1A] mt-0.5 shrink-0"
+              aria-hidden="true"
+            />
+            <span>Practice chats based on content you upload</span>
+          </li>
+        </ul>
+      </HandDrawnCard>
+
+      <HandDrawnCard dashed className="bg-[#F59E0B]/10">
+        <h2 className="font-heading text-2xl font-bold mb-2">Guest mode is active</h2>
+        <p className="text-gray-700 mb-4">
+          You can practice right now without creating an account. If you want
+          to keep your progress, you can sign up at any time.
+        </p>
+        <p className="text-sm font-semibold text-[#1A1A1A] mb-4">
+          Remaining guest sessions: {remainingGuestSessions}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Link to={`/signup${authQuery}`} className="w-full sm:w-auto">
+            <HandDrawnButton className="w-full sm:w-auto" variant="primary">
+              Create free account
+            </HandDrawnButton>
+          </Link>
+          <Link to={`/login${authQuery}`} className="w-full sm:w-auto">
+            <HandDrawnButton className="w-full sm:w-auto" variant="outline">
+              Log in
+            </HandDrawnButton>
+          </Link>
+        </div>
+      </HandDrawnCard>
+    </div>
+  );
+
   return (
     <SessionPage
       title={`Guest intro — ${language}`}
       subtitle={`${goal}. No signup required for this session.`}
       systemContext={systemContext}
       backTo="/intro"
+      upsellContent={upsellContent}
     >
-      <div className="space-y-4 max-w-4xl mx-auto">
-        <HandDrawnCard dashed className="bg-[#F59E0B]/10">
-          <h2 className="font-heading text-2xl font-bold mb-2">Guest mode is active</h2>
-          <p className="text-gray-700 mb-4">
-            You can practice right now without creating an account. If you want
-            to keep your progress, you can sign up at any time.
-          </p>
-          <p className="text-sm font-semibold text-[#1A1A1A] mb-4">
-            Remaining guest sessions: {remainingGuestSessions}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link to={`/signup${authQuery}`} className="w-full sm:w-auto">
-              <HandDrawnButton className="w-full sm:w-auto" variant="primary">
-                Create free account
-              </HandDrawnButton>
-            </Link>
-            <Link to={`/login${authQuery}`} className="w-full sm:w-auto">
-              <HandDrawnButton className="w-full sm:w-auto" variant="outline">
-                Log in
-              </HandDrawnButton>
-            </Link>
-          </div>
-        </HandDrawnCard>
-
-        <HandDrawnCard rotate="right">
-          <h3 className="font-heading text-xl font-bold mb-3">
-            What you unlock by signing up
-          </h3>
-          <ul className="space-y-2">
-            <li className="flex items-start gap-2">
-              <CheckCircle2
-                size={18}
-                className="text-[#1A1A1A] mt-0.5 shrink-0"
-                aria-hidden="true"
-              />
-              <span>A personalized curriculum adapted to your level</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2
-                size={18}
-                className="text-[#1A1A1A] mt-0.5 shrink-0"
-                aria-hidden="true"
-              />
-              <span>Progress tracking so you can see measurable improvement</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2
-                size={18}
-                className="text-[#1A1A1A] mt-0.5 shrink-0"
-                aria-hidden="true"
-              />
-              <span>Practice chats based on content you upload</span>
-            </li>
-          </ul>
-        </HandDrawnCard>
-      </div>
+      {/* Empty children - voice interface will render first, upsell below */}
     </SessionPage>
   );
 };

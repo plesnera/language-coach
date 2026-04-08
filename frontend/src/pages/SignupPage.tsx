@@ -29,6 +29,10 @@ export function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name || !email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;

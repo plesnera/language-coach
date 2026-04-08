@@ -95,6 +95,9 @@ export function AdminLessonsPage() {
   const [isDrafting, setIsDrafting] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [uploadedAudioFile, setUploadedAudioFile] = useState<File | null>(null);
+  const [audioUploadStatus, setAudioUploadStatus] = useState<string | null>(null);
+  const [audioUploadError, setAudioUploadError] = useState<boolean>(false);
 
   // ---- Load lessons ----
   const loadLessons = useCallback(async () => {
@@ -162,6 +165,38 @@ export function AdminLessonsPage() {
     }
   };
 
+  const handleAudioFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    const validTypes = ['audio/mp3', 'audio/wav', 'audio/ogg', 'audio/mpeg', 'audio/x-m4a'];
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|ogg|m4a)$/i)) {
+      setAudioUploadStatus('Unsupported file type. Please upload MP3, WAV, OGG, or M4A.');
+      setAudioUploadError(true);
+      e.target.value = '';
+      return;
+    }
+    
+    // Validate file size (50MB limit)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      setAudioUploadStatus('File too large. Maximum size is 50MB.');
+      setAudioUploadError(true);
+      e.target.value = '';
+      return;
+    }
+    
+    setAudioUploadStatus('Audio file ready for transcription');
+    setAudioUploadError(false);
+    setUploadedAudioFile(file);
+    
+    // Clear any existing remote reference when uploading local file
+    if (currentLesson.source_audio_ref) {
+      setCurrentLesson((prev) => ({ ...prev, source_audio_ref: '' }));
+    }
+  };
+
   // ---- Modal helpers ----
   const handleOpenModal = (lesson?: Lesson) => {
     setCurrentLesson(lesson ? { ...lesson } : {});
@@ -176,6 +211,9 @@ export function AdminLessonsPage() {
     setAiInstruction('');
     setAiHistory([]);
     setAiError(null);
+    setUploadedAudioFile(null);
+    setAudioUploadStatus(null);
+    setAudioUploadError(false);
     loadImageLibrary();
     setIsModalOpen(true);
   };
@@ -422,25 +460,48 @@ export function AdminLessonsPage() {
   };
 
   const handleTranscribe = async () => {
-    if (!currentLesson.source_audio_ref) return;
     setIsTranscribing(true);
+    setAudioUploadStatus(null);
+    setAudioUploadError(false);
+    
     try {
       const formData = new FormData();
-      // For now, use the mock endpoint with a placeholder
-      const res = await fetch(`${API_BASE}/api/admin/transcribe`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${user?.token}` },
-        body: formData,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCurrentLesson((prev) => ({ ...prev, source_transcript: data.transcript }));
+      
+      // Handle local file upload
+      if (uploadedAudioFile) {
+        formData.append('file', uploadedAudioFile);
+        const res = await fetch(`${API_BASE}/api/admin/transcribe`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${user?.token}` },
+          body: formData,
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentLesson((prev) => ({ ...prev, source_transcript: data.transcript }));
+          setAudioUploadStatus('Transcription completed successfully!');
+        } else {
+          const errorData = await res.json().catch(() => ({}));
+          setAudioUploadStatus(errorData?.detail || 'Transcription failed. Please try again.');
+          setAudioUploadError(true);
+        }
       }
-    } catch {
-      // Fallback: mock
+      // Handle remote reference
+      else if (currentLesson.source_audio_ref) {
+        // For remote files, we'd need a different approach
+        // This would typically involve a backend service that can access the remote file
+        setCurrentLesson((prev) => ({
+          ...prev,
+          source_transcript: 'Remote audio transcription not yet implemented. Please upload a local file.',
+        }));
+      }
+    } catch (error) {
+      console.error('Transcription error:', error);
+      setAudioUploadStatus('Transcription failed. Please try again.');
+      setAudioUploadError(true);
       setCurrentLesson((prev) => ({
         ...prev,
-        source_transcript: 'Transcription not available — upload audio via the API.',
+        source_transcript: 'Transcription failed. Please try again.',
       }));
     } finally {
       setIsTranscribing(false);
@@ -827,14 +888,49 @@ export function AdminLessonsPage() {
                   <Mic size={20} className="text-[#DC2626]" /> Source Material
                 </h3>
                 <div className="space-y-4">
-                  <HandDrawnInput
-                    label="Source Audio Reference (URL/ID)"
-                    value={currentLesson.source_audio_ref || ''}
-                    onChange={(e) =>
-                      setCurrentLesson({ ...currentLesson, source_audio_ref: e.target.value })
-                    }
-                    placeholder="s3://... or audio ID"
-                  />
+                  <div className="p-4 border-2 border-[#1A1A1A] hand-drawn-border-alt bg-[#FAFAF8]">
+                    <h4 className="font-heading font-bold text-base mb-3 flex items-center gap-2">
+                      <Upload size={18} className="text-[#DC2626]" /> Audio Source Options
+                    </h4>
+                    <div className="space-y-3">
+                      {/* Local File Upload */}
+                      <div className="border-2 border-dashed border-gray-300 hand-drawn-border-alt p-3 text-center">
+                        <label className="inline-flex items-center gap-2 text-sm font-bold px-4 py-2 border-2 border-[#1A1A1A] hand-drawn-border-alt cursor-pointer hover:bg-gray-100 transition-colors mb-2">
+                          <Upload size={16} /> Upload Local Audio File
+                          <input
+                            type="file"
+                            accept="audio/*,.mp3,.wav,.ogg,.m4a"
+                            onChange={handleAudioFileUpload}
+                            className="hidden"
+                            disabled={isTranscribing}
+                          />
+                        </label>
+                        <p className="text-xs text-gray-500">
+                          Supported formats: MP3, WAV, OGG, M4A
+                        </p>
+                        {audioUploadStatus && (
+                          <p className={`text-xs mt-1 ${audioUploadError ? 'text-[#DC2626]' : 'text-[#F59E0B]'}`}>
+                            {audioUploadStatus}
+                          </p>
+                        )}
+                      </div>
+                      {/* OR Divider */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-px bg-gray-300"></div>
+                        <span className="text-xs font-bold text-gray-500">OR</span>
+                        <div className="flex-1 h-px bg-gray-300"></div>
+                      </div>
+                      {/* Remote Reference */}
+                      <HandDrawnInput
+                        label="Remote Audio Reference (URL/ID)"
+                        value={currentLesson.source_audio_ref || ''}
+                        onChange={(e) =>
+                          setCurrentLesson({ ...currentLesson, source_audio_ref: e.target.value })
+                        }
+                        placeholder="s3://bucket/path.mp3, https://..., or audio ID"
+                      />
+                    </div>
+                  </div>
                   <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-end">
                       <label className="font-heading font-bold text-[#1A1A1A] text-lg">
@@ -844,7 +940,7 @@ export function AdminLessonsPage() {
                         <button
                           type="button"
                           onClick={handleTranscribe}
-                          disabled={isTranscribing || !currentLesson.source_audio_ref}
+                          disabled={isTranscribing || (!currentLesson.source_audio_ref && !uploadedAudioFile)}
                           className="text-xs font-bold px-3 py-1 border-2 border-[#1A1A1A] hand-drawn-border-pill hover:bg-gray-100 disabled:opacity-50 transition-colors flex items-center gap-1"
                         >
                           {isTranscribing ? 'Transcribing...' : 'Transcribe Audio'}

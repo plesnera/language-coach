@@ -20,9 +20,13 @@ def transcribe_audio(
 ) -> str:
     """Transcribe audio bytes and return the transcript text."""
     if _LOCAL_DEV:
+        # Development mock that simulates successful transcription
+        # This allows testing the file upload flow without GCP dependencies
         return (
-            "[LOCAL_DEV] Audio transcription requires Google Cloud "
-            "Speech-to-Text. Run without LOCAL_DEV to transcribe."
+            f"Mock transcription successful! File size: {len(file_bytes)} bytes. "
+            f"Detected language: {language_code}. "
+            "This is a simulated transcript that would come from Google Cloud Speech-to-Text "
+            "in production. The actual audio content would be transcribed here."
         )
     return _transcribe_gcp(file_bytes, language_code)
 

@@ -18,7 +18,7 @@ playground: build-frontend-if-needed
 	@echo "| 🚀 Starting your agent playground...                                        |"
 	@echo "|                                                                             |"
 	@echo "| 🌐 Access your app at: http://localhost:8000                               |"
-	@echo "| 💡 Try asking: What's the weather in San Francisco?                         |"
+	@echo "| 💡 Open http://localhost:8000 and try the guest intro flow.                |"
 	@echo "|                                                                             |"
 	@echo "| 🔍 IMPORTANT: Select the 'app' folder to interact with your agent.          |"
 	@echo "==============================================================================="

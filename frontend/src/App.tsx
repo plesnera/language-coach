@@ -30,6 +30,7 @@ import HistoryPage from "./pages/HistoryPage";
 import { IntroFlowPage } from "./pages/IntroFlowPage";
 import { AboutPage, PrivacyPage, TermsPage } from "./pages/StaticPages";
 import GuestIntroSessionPage from "./pages/GuestIntroSessionPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { AdminLayout } from "./components/AdminLayout";
 import { AdminMainPage } from "./pages/admin/AdminMainPage";
 import { AdminLanguagePage } from "./pages/admin/AdminLanguagePage";
@@ -180,6 +181,7 @@ function AppRoutes() {
       </Route>
 
       {isDevelopment && <Route path="/debug" element={<DebugPage />} />}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
