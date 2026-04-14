@@ -77,3 +77,42 @@ resource "google_service_account_iam_member" "cicd_run_invoker_account_user" {
   member             = "serviceAccount:${resource.google_service_account.cicd_runner_sa.email}"
   depends_on         = [resource.google_project_service.cicd_services, resource.google_project_service.deploy_project_services]
 }
+
+# ====================================================================
+# Firestore IAM — least-privilege access for the application SA
+# ====================================================================
+
+resource "google_project_iam_member" "app_sa_firestore" {
+  for_each = local.deploy_project_ids
+  project  = each.value
+  role     = "roles/datastore.user"
+  member   = "serviceAccount:${google_service_account.app_sa[each.key].email}"
+
+  depends_on = [resource.google_project_service.deploy_project_services]
+}
+
+# ====================================================================
+# Monitoring IAM — allow app SA to write custom metrics
+# ====================================================================
+
+resource "google_project_iam_member" "app_sa_monitoring" {
+  for_each = local.deploy_project_ids
+  project  = each.value
+  role     = "roles/monitoring.metricWriter"
+  member   = "serviceAccount:${google_service_account.app_sa[each.key].email}"
+
+  depends_on = [resource.google_project_service.deploy_project_services]
+}
+
+# ====================================================================
+# Error Reporting IAM — allow app SA to report errors
+# ====================================================================
+
+resource "google_project_iam_member" "app_sa_error_reporting" {
+  for_each = local.deploy_project_ids
+  project  = each.value
+  role     = "roles/errorreporting.writer"
+  member   = "serviceAccount:${google_service_account.app_sa[each.key].email}"
+
+  depends_on = [resource.google_project_service.deploy_project_services]
+}

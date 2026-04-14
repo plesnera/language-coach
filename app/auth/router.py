@@ -24,10 +24,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from firebase_admin import auth as firebase_auth
 from pydantic import BaseModel, EmailStr
 
+from app.app_utils.rate_limit import auth_rate_limit
 from app.db import users as users_repo
 
 logger = logging.getLogger(__name__)
@@ -60,7 +61,8 @@ class ForgotPasswordRequest(BaseModel):
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
-def register(body: RegisterRequest) -> dict[str, Any]:
+@auth_rate_limit
+def register(request: Request, body: RegisterRequest) -> dict[str, Any]:
     """Create a user via Firebase Auth and store in Firestore."""
     try:
         fb_user = firebase_auth.create_user(
@@ -91,7 +93,8 @@ def register(body: RegisterRequest) -> dict[str, Any]:
 
 
 @router.post("/forgot-password", status_code=200)
-def forgot_password(body: ForgotPasswordRequest) -> dict[str, str]:
+@auth_rate_limit
+def forgot_password(request: Request, body: ForgotPasswordRequest) -> dict[str, str]:
     """Send a password-reset email."""
     try:
         firebase_auth.generate_password_reset_link(body.email)

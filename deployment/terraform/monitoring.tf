@@ -146,3 +146,51 @@ resource "google_monitoring_dashboard" "cloud_run_dashboard" {
 
   depends_on = [resource.google_project_service.deploy_project_services]
 }
+
+# ====================================================================
+# SLO: API Availability >= 99.5%
+# ====================================================================
+
+resource "google_monitoring_slo" "api_availability" {
+  for_each     = local.deploy_project_ids
+  project      = each.value
+  service      = "ist:${each.value}-cloud-run-${var.project_name}"
+  display_name = "${var.project_name} API Availability (${each.key})"
+
+  goal                = 0.995
+  rolling_period_days = 28
+
+  request_based_sli {
+    good_total_ratio {
+      total_service_filter = "resource.type=\"cloud_run_revision\" AND metric.type=\"run.googleapis.com/request_count\""
+      good_service_filter  = "resource.type=\"cloud_run_revision\" AND metric.type=\"run.googleapis.com/request_count\" AND metric.labels.response_code_class!=\"5xx\""
+    }
+  }
+
+  depends_on = [resource.google_project_service.deploy_project_services]
+}
+
+# ====================================================================
+# SLO: p99 Latency <= 5s
+# ====================================================================
+
+resource "google_monitoring_slo" "api_latency" {
+  for_each     = local.deploy_project_ids
+  project      = each.value
+  service      = "ist:${each.value}-cloud-run-${var.project_name}"
+  display_name = "${var.project_name} API Latency p99 (${each.key})"
+
+  goal                = 0.99
+  rolling_period_days = 28
+
+  request_based_sli {
+    distribution_cut {
+      distribution_filter = "resource.type=\"cloud_run_revision\" AND metric.type=\"run.googleapis.com/request_latencies\""
+      range {
+        max = 5000
+      }
+    }
+  }
+
+  depends_on = [resource.google_project_service.deploy_project_services]
+}

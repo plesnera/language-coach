@@ -115,6 +115,16 @@ from app.app_utils.security import configure_security  # noqa: E402
 
 configure_security(app)
 
+# Rate limiting on auth endpoints
+from app.app_utils.rate_limit import configure_rate_limiting  # noqa: E402
+
+configure_rate_limiting(app)
+
+# Structured logging with trace-ID correlation
+from app.app_utils.structured_logging import configure_structured_logging  # noqa: E402
+
+configure_structured_logging(app)
+
 # ── Register REST API routers ───────────────────────────────────────────────
 from app.api.admin import router as admin_router  # noqa: E402
 from app.api.conversations import router as conversations_router  # noqa: E402
