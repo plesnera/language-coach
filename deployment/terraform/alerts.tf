@@ -127,3 +127,71 @@ resource "google_monitoring_alert_policy" "low_traffic" {
 
   depends_on = [resource.google_project_service.deploy_project_services]
 }
+
+# ====================================================================
+# Alert: Firestore High Read Latency
+# ====================================================================
+
+resource "google_monitoring_alert_policy" "firestore_latency" {
+  for_each     = var.alert_email != "" ? local.deploy_project_ids : {}
+  project      = each.value
+  display_name = "${var.project_name} Firestore High Read Latency (${each.key})"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "Firestore p99 read latency exceeds 2s"
+    condition_threshold {
+      filter          = "resource.type=\"firestore.googleapis.com/Database\" AND metric.type=\"firestore.googleapis.com/document/read_latencies\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = 2000
+      duration        = "300s"
+      aggregations {
+        alignment_period     = "60s"
+        per_series_aligner   = "ALIGN_PERCENTILE_99"
+        cross_series_reducer = "REDUCE_MEAN"
+      }
+    }
+  }
+
+  notification_channels = [google_monitoring_notification_channel.email[each.key].name]
+
+  alert_strategy {
+    auto_close = "1800s"
+  }
+
+  depends_on = [resource.google_project_service.deploy_project_services]
+}
+
+# ====================================================================
+# Alert: Firestore High Error Count
+# ====================================================================
+
+resource "google_monitoring_alert_policy" "firestore_errors" {
+  for_each     = var.alert_email != "" ? local.deploy_project_ids : {}
+  project      = each.value
+  display_name = "${var.project_name} Firestore High Error Count (${each.key})"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "Firestore errors exceed 10/min"
+    condition_threshold {
+      filter          = "resource.type=\"firestore.googleapis.com/Database\" AND metric.type=\"firestore.googleapis.com/api/request_count\" AND metric.labels.status!=\"OK\""
+      comparison      = "COMPARISON_GT"
+      threshold_value = 10
+      duration        = "300s"
+      aggregations {
+        alignment_period     = "60s"
+        per_series_aligner   = "ALIGN_RATE"
+        cross_series_reducer = "REDUCE_SUM"
+      }
+    }
+  }
+
+  notification_channels = [google_monitoring_notification_channel.email[each.key].name]
+
+  alert_strategy {
+    auto_close = "1800s"
+  }
+
+  depends_on = [resource.google_project_service.deploy_project_services]
+}
