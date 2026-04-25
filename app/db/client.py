@@ -52,5 +52,9 @@ def get_firestore_client() -> Any:
         if project:
             os.environ["GOOGLE_CLOUD_PROJECT_ID"] = project
             os.environ["GOOGLE_CLOUD_PROJECT"] = project
-        _client = firestore.Client(project=project)
+        # Use named database in production; emulator uses (default)
+        if os.environ.get("FIRESTORE_EMULATOR_HOST"):
+            _client = firestore.Client(project=project)
+        else:
+            _client = firestore.Client(project=project, database="language-coach-db")
     return _client

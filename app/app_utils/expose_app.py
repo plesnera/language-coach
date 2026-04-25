@@ -25,15 +25,12 @@ from typing import Any, Literal
 import backoff
 import google.auth
 import vertexai
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from google.cloud import logging as google_cloud_logging
 from pydantic import BaseModel, Field
 from websockets.exceptions import ConnectionClosedError
-
-load_dotenv(override=True)
 _project_id = os.environ.get("GOOGLE_CLOUD_PROJECT_ID") or os.environ.get(
     "GOOGLE_CLOUD_PROJECT"
 )
@@ -82,28 +79,50 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.db import system_prompts as prompts_repo
     from app.db import topics as topics_repo
 
+    # Seed default data with better error handling
     try:
+        logging.info("Seeding default languages...")
         lang_repo.seed_defaults()
+        
+        logging.info("Seeding default courses...")
         courses_repo.seed_defaults()
+        
+        logging.info("Seeding default topics...")
         topics_repo.seed_defaults()
+        
+        logging.info("Seeding default system prompts...")
         prompts_repo.seed_defaults()
-    except Exception:
-        logging.exception("Failed to seed default data (non-fatal)")
+        
+    except Exception as e:
+        logging.exception("Failed to seed default data")
+        raise  # Fail startup if seeding fails in production
 
     # Seed a local-test-user in the Auth Emulator (only when running against it)
     _seed_local_test_user()
 
-    # Startup guard: warn about missing required prompts
+    # Verify required system prompts are available
+    logging.info("Verifying required system prompts...")
+    missing_prompts = []
     try:
         for prompt_type in ("router", "beginner", "topic", "freestyle"):
             if prompts_repo.get_active("es", prompt_type) is None:
-                logging.warning(
+                missing_prompts.append(prompt_type)
+                logging.error(
                     "No active system prompt found for type '%s'. "
-                    "Create one in /admin/prompts before starting agent sessions.",
+                    "This will cause agent sessions to fail.",
                     prompt_type,
                 )
     except Exception:
-        logging.exception("Could not verify system prompts (non-fatal)")
+        logging.exception("Could not verify system prompts")
+        raise
+    
+    if missing_prompts:
+        error_msg = f"Missing required system prompts: {', '.join(missing_prompts)}. " \
+                   f"Please create them in /admin/prompts or check Firestore permissions."
+        logging.error(error_msg)
+        raise RuntimeError(error_msg)
+    
+    logging.info("All required system prompts are available")
 
     yield
 
