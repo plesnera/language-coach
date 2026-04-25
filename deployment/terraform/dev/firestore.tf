@@ -8,7 +8,7 @@ resource "google_project_service" "firestore" {
 # Create the Firestore database (Native mode)
 resource "google_firestore_database" "default" {
   project     = var.dev_project_id
-  name        = "(default)"
+  name        = "language-coach-db"
   location_id = var.region
   type        = "FIRESTORE_NATIVE"
 
