@@ -12,6 +12,7 @@ A real-time voice-based language learning app. Users practice speaking a target 
 **Frontend**: React 18 / TypeScript / Vite / Tailwind CSS 4 / SCSS / React Router 7
 **Package management**: `uv` (Python), `npm` (frontend)
 **AI model**: `gemini-live-2.5-flash-native-audio` via Vertex AI
+**Batch transcription**: `voxtral-mini-latest` via Mistral AI
 **Infra**: GCP / Terraform / Cloud Build / Agent Engine
 
 ## Project Structure
@@ -158,6 +159,69 @@ make playground     # Build frontend + start backend on :8000
 make playground-dev # Both with hot-reload (backend :8000, frontend :8501)
 ```
 
+### Production Deployment
+
+#### Prerequisites
+- Google Cloud project with billing enabled
+- `gcloud` CLI installed and authenticated
+- Firebase CLI installed (`npm install -g firebase-tools`)
+- Required APIs enabled (Firestore, Cloud Run, Vertex AI, etc.)
+
+#### Deployment Steps
+
+1. **Set up your GCP project and enable required services:**
+   ```bash
+   gcloud config set project YOUR_PROJECT_ID
+   make setup-dev-env  # Sets up Firestore and other required resources using Terraform
+   ```
+
+2. **Deploy the ADK agent to Vertex Agent Engine:**
+   ```bash
+   make deploy-agent
+   ```
+   - This deploys the agent with the specified configuration
+   - Creates a service account for the agent if `AGENT_IDENTITY=true` is set
+   - The Firestore database should already be available from step 1
+
+3. **Deploy the API service to Cloud Run:**
+   ```bash
+   make deploy-api
+   ```
+   - Automatically uses the Agent Engine ID from the previous step
+   - Deploys the FastAPI backend with WebSocket support
+   - Configures environment variables for GCP integration
+
+4. **Deploy the frontend to Firebase Hosting:**
+   ```bash
+   make deploy-frontend
+   ```
+   - Builds the React frontend with production settings
+   - Automatically detects API and WebSocket URLs from deployed services
+   - Deploys to Firebase Hosting
+
+5. **Full stack deployment (all-in-one):**
+   ```bash
+   make deploy
+   ```
+   - Runs `deploy-agent`, `deploy-api`, and `deploy-frontend` in sequence
+
+#### Environment Variables for Production
+- `GOOGLE_CLOUD_PROJECT`: Your GCP project ID
+- `GOOGLE_CLOUD_LOCATION`: Deployment region (default: `europe-west1`)
+- `LOGS_BUCKET_NAME`: GCS bucket for logs (optional)
+- `VITE_API_BASE_URL`: Frontend API base URL
+- `VITE_WS_BASE_URL`: Frontend WebSocket base URL
+
+#### Post-Deployment
+- Verify the API service is running: `gcloud run services describe language-coach-api`
+- Check Firebase Hosting deployment: `firebase deploy --only hosting`
+- Monitor logs in Cloud Logging for any issues
+
+For Gemini Enterprise integration:
+```bash
+make register-gemini-enterprise
+```
+
 ## Key Development Patterns
 
 ### Backend API Pattern
@@ -256,7 +320,7 @@ The UI uses a hand-drawn / doodle theme with these shared components:
 - `GET/PUT /api/admin/users/` — list, update role, disable
 - `GET /api/admin/images` — image library
 - `POST /api/admin/images/upload` — upload image (multipart)
-- `POST /api/admin/transcribe` — audio transcription
+- `POST /api/admin/transcribe` — audio transcription (uses Mistral AI)
 - `POST /api/admin/summarise` — AI transcript summarisation
 
 ### WebSocket

@@ -4,7 +4,48 @@ This file tracks all known tasks, improvements, and technical debt for the Langu
 
 ## 🔥 Critical (Must Fix Before Production) 🔴
 
-### TODO-001: Add Production Monitoring and Logging
+### TODO-001: Fix Pre-existing Test Failure in test_services.py
+**Status:** ❌ Not Started
+**Priority:** Critical
+**Estimate:** 1-2 hours
+**Owner:** [Unassigned]
+
+**Description:**
+`tests/unit/test_services.py::test_transcribe_audio_local_dev` fails because it expects "LOCAL_DEV" in the mock transcription result, but the mock does not include it.
+
+**Error:**
+```
+AssertionError: assert 'LOCAL_DEV' in 'Mock transcription successful! File size: 15 bytes. Detected language: es-ES...'
+```
+
+**Acceptance Criteria:**
+- [ ] Fix the mock or the test assertion
+- [ ] Test passes consistently
+
+---
+
+### TODO-002: Fix Pre-existing Test Errors in test_admin_lesson_ai_api.py
+**Status:** ❌ Not Started
+**Priority:** Critical
+**Estimate:** 1-2 days
+**Owner:** [Unassigned]
+
+**Description:**
+`tests/unit/test_admin_lesson_ai_api.py` has 5 import/dependency errors preventing the entire test module from running. Likely missing modules or incorrect imports.
+
+**Error:**
+```
+ERROR at setup of test_admin_create_lesson_forwards_metadata_fields
+Permission denied on Firestore or missing dependency
+```
+
+**Acceptance Criteria:**
+- [ ] Identify and fix import/dependency issues
+- [ ] All 5 tests run and pass
+
+---
+
+### TODO-003: Add Production Monitoring and Logging
 **Status:** ❌ Not Started  
 **Priority:** Critical  
 **Estimate:** 3-5 days  
@@ -49,7 +90,7 @@ Essential for production operations, troubleshooting, and compliance. Currently 
 
 ---
 
-### TODO-002: Implement Secrets Management
+### TODO-004: Implement Secrets Management
 **Status:** ❌ Not Started  
 **Priority:** Critical  
 **Estimate:** 2-3 days  
@@ -279,7 +320,7 @@ Add `/api/health` endpoint for monitoring application health and dependencies.
 
 ## 🟡 High Priority (Should Fix Before Production)
 
-### TODO-010: Implement Caching Layer
+### TODO-012: Implement Caching Layer
 **Status:** ✅ Completed  
 **Priority:** High  
 **Estimate:** 2-3 days  
@@ -322,7 +363,7 @@ Add Redis/Memorystore caching layer for frequent queries and API responses. Incl
 
 ---
 
-### TODO-011: Add Frontend Testing
+### TODO-013: Add Frontend Testing
 **Status:** ✅ Completed  
 **Priority:** High  
 **Estimate:** 5-7 days  
@@ -358,7 +399,7 @@ Add comprehensive frontend testing with Playwright or Cypress.
 
 ---
 
-### TODO-012: Fix N+1 Query Patterns
+### TODO-014: Fix N+1 Query Patterns
 **Status:** ✅ Completed  
 **Priority:** High  
 **Estimate:** 2-3 days  
@@ -389,7 +430,7 @@ Identify and fix N+1 query patterns in database access, particularly in course/l
 
 ---
 
-### TODO-013: Implement Canary Deployments
+### TODO-015: Implement Canary Deployments
 **Status:** ✅ Completed  
 **Priority:** High  
 **Estimate:** 2-3 days  
@@ -423,7 +464,7 @@ Add canary deployment strategy to Cloud Build pipelines for safer production rol
 
 ---
 
-### TODO-014: Configure WAF and CDN
+### TODO-016: Configure WAF and CDN
 **Status:** ✅ Completed  
 **Priority:** High  
 **Estimate:** 2-3 days  
@@ -471,7 +512,7 @@ Add Web Application Firewall (WAF) and CDN configuration for production. Include
 
 ## 🟢 Medium Priority (Nice to Have)
 
-### TODO-020: Add DEV_FIRESTORE_PROJECT_ID Option
+### TODO-022: Add DEV_FIRESTORE_PROJECT_ID Option
 **Status:** ✅ Completed  
 **Priority:** Medium  
 **Estimate:** 1 day  
@@ -492,7 +533,7 @@ Add configuration option to use real Firestore dev database instead of emulator 
 
 ---
 
-### TODO-021: Add Docker Compose for Production-like Testing
+### TODO-023: Add Docker Compose for Production-like Testing
 **Status:** ✅ Completed  
 **Priority:** Medium  
 **Estimate:** 2-3 days  
@@ -526,7 +567,7 @@ Create docker-compose setup for local production-like testing environment.
 
 ---
 
-### TODO-022: Add Error Boundaries to Frontend
+### TODO-024: Add Error Boundaries to Frontend
 **Status:** ✅ Completed  
 **Priority:** Medium  
 **Estimate:** 1-2 days  
@@ -558,7 +599,7 @@ Add React error boundaries to prevent UI crashes from component errors.
 
 ---
 
-### TODO-023: Expand Documentation
+### TODO-025: Expand Documentation
 **Status:** ✅ Completed  
 **Priority:** Medium  
 **Estimate:** 3-5 days  
@@ -632,26 +673,26 @@ Expand and improve documentation for onboarding and maintenance.
 ## 🎯 Roadmap
 
 ### Phase 1: Production Readiness (3-4 weeks)
-- TODO-001: Add Production Monitoring
-- TODO-002: Implement Secrets Management  
+- TODO-003: Add Production Monitoring
+- TODO-004: Implement Secrets Management  
 - TODO-003: Expand Authentication Testing
 - TODO-004: Add Rate Limiting
 - TODO-005: Implement Security Headers
 - TODO-006: Configure Production Firestore Database
 - TODO-007: Add Health Check Endpoint
-- TODO-014: Configure WAF and CDN
+- TODO-016: Configure WAF and CDN
 
 ### Phase 2: Performance & Reliability (2-3 weeks)
-- TODO-010: Implement Caching Layer
-- TODO-011: Add Frontend Testing
-- TODO-012: Fix N+1 Query Patterns
-- TODO-013: Implement Canary Deployments
+- TODO-012: Implement Caching Layer
+- TODO-013: Add Frontend Testing
+- TODO-014: Fix N+1 Query Patterns
+- TODO-015: Implement Canary Deployments
 
 ### Phase 3: Developer Experience (1-2 weeks)
-- TODO-020: Add DEV_FIRESTORE_PROJECT_ID Option
-- TODO-021: Add Docker Compose for Prod Testing
-- TODO-022: Add Error Boundaries
-- TODO-023: Expand Documentation
+- TODO-022: Add DEV_FIRESTORE_PROJECT_ID Option
+- TODO-023: Add Docker Compose for Prod Testing
+- TODO-024: Add Error Boundaries
+- TODO-025: Expand Documentation
 
 ## 📝 Task Management
 
