@@ -26,28 +26,34 @@ def load_prompt(language_id: str, prompt_type: str) -> str:
     If no active prompt exists, defaults are seeded and the lookup is retried.
     Raises ``RuntimeError`` when no prompt can be resolved.
     """
+    from app.db import system_prompts as prompts_repo
+
+    error_msg = f"Missing active system prompt for {language_id}/{prompt_type}"
+
     try:
-        from app.db import system_prompts as prompts_repo
+        active = prompts_repo.get_active(language_id, prompt_type)
+        if active is not None:
+            return active["prompt_text"]
+
+        logger.warning(
+            "No active system prompt found for %s/%s — attempting to seed defaults",
+            language_id,
+            prompt_type,
+        )
+
+        try:
+            prompts_repo.seed_defaults()
+        except Exception:
+            logger.exception("Failed to seed prompts for %s/%s", language_id, prompt_type)
 
         active = prompts_repo.get_active(language_id, prompt_type)
         if active is not None:
+            logger.info("Successfully seeded and loaded prompt for %s/%s", language_id, prompt_type)
             return active["prompt_text"]
-        logger.info(
-            "No active system prompt found for %s/%s — seeding defaults and retrying",
-            language_id,
-            prompt_type,
-        )
-        prompts_repo.seed_defaults()
-        active = prompts_repo.get_active(language_id, prompt_type)
-        if active is not None:
-            return active["prompt_text"]
+
+        logger.error(error_msg)
+        raise RuntimeError(error_msg)
     except Exception as exc:
-        logger.exception(
-            "Could not load prompt from Firestore for %s/%s",
-            language_id,
-            prompt_type,
-        )
-        raise RuntimeError(
-            f"Missing active system prompt for {language_id}/{prompt_type}"
-        ) from exc
-    raise RuntimeError(f"Missing active system prompt for {language_id}/{prompt_type}")
+        if str(exc) == error_msg:
+            raise
+        raise RuntimeError(error_msg) from exc

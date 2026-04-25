@@ -58,16 +58,14 @@ resource "google_project_iam_member" "app_sa_roles" {
 
 
 # Grant required permissions to Vertex AI service account for Agent Engine
-resource "google_project_iam_member" "vertex_ai_sa_permissions" {
-  for_each = {
-    for pair in setproduct(keys(local.project_ids), var.app_sa_roles) :
-    join(",", pair) => pair[1]
-  }
+# Note: Using data source instead of non-existent resource
+# data "google_project_service_identity" "vertex_sa" {
+#   provider = google.dev_billing_override
+#   project  = var.dev_project_id
+#   service  = "aiplatform.googleapis.com"
+# }
 
-  project    = var.dev_project_id
-  role       = each.value
-  member     = google_project_service_identity.vertex_sa.member
-  depends_on = [resource.google_project_service.services]
-}
+# Vertex AI service account permissions are typically handled automatically
+# If manual permissions are needed, uncomment and use the data source above
 
 

@@ -20,11 +20,8 @@ import os
 
 import google.auth
 import vertexai
-from dotenv import load_dotenv
 
-load_dotenv(override=True)
-
-# Prefer project/location from .env; fall back to google.auth.default()
+# Prefer project/location from environment; fall back to google.auth.default()
 project_id = os.environ.get("GOOGLE_CLOUD_PROJECT_ID") or os.environ.get(
     "GOOGLE_CLOUD_PROJECT"
 )

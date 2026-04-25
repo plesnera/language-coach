@@ -15,6 +15,7 @@
 locals {
   services = [
     "aiplatform.googleapis.com",
+   /* "agentengine.googleapis.com",  # Required for Vertex Agent Engine*/
     "cloudbuild.googleapis.com",
     "run.googleapis.com",
     "bigquery.googleapis.com",
@@ -38,7 +39,11 @@ resource "google_project_service" "services" {
   disable_on_destroy = false
 }
 
-resource "google_project_service_identity" "vertex_sa" {
-  project = var.dev_project_id
-  service = "aiplatform.googleapis.com"
-}
+# Note: google_project_service_identity is not a valid resource type
+# The Vertex AI service account is automatically created when the API is enabled
+# If you need to reference it, use:
+# data "google_project_service_identity" "vertex_sa" {
+#   provider = google.dev_billing_override
+#   project  = var.dev_project_id
+#   service  = "aiplatform.googleapis.com"
+# }

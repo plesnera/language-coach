@@ -125,7 +125,7 @@ deploy-prereqs:
 # Validate that required backend cloud resources exist before agent deployment.
 deploy-agent-prereqs: deploy-prereqs
 	@PROJECT_ID=$$(gcloud config get-value project 2>/dev/null); \
-	if ! gcloud firestore databases describe --project="$$PROJECT_ID" --database="(default)" >/dev/null 2>&1; then \
+	if ! gcloud firestore databases describe --project="$$PROJECT_ID" --database="language-coach-db" >/dev/null 2>&1; then \
 		echo "❌ Firestore default database is not available in $$PROJECT_ID."; \
 		echo "Run 'make setup-dev-env' (or provision Firestore + required APIs) before deploying."; \
 		exit 1; \
@@ -137,7 +137,7 @@ deploy-agent-prereqs: deploy-prereqs
 # Set AGENT_IDENTITY=true to enable per-agent IAM identity (Preview).
 deploy-agent: deploy-agent-prereqs
 	@PROJECT_ID=$$(gcloud config get-value project 2>/dev/null); \
-	APP_SERVICE_ACCOUNT="$$PROJECT_ID-$(PROJECT_NAME)-app@$$PROJECT_ID.iam.gserviceaccount.com"; \
+	APP_SERVICE_ACCOUNT="$(PROJECT_NAME)-app@$$PROJECT_ID.iam.gserviceaccount.com"; \
 	SERVICE_ACCOUNT_FLAG=""; \
 	if gcloud iam service-accounts describe "$$APP_SERVICE_ACCOUNT" --project="$$PROJECT_ID" >/dev/null 2>&1; then \
 		SERVICE_ACCOUNT_FLAG="--service-account=$$APP_SERVICE_ACCOUNT"; \
@@ -157,6 +157,8 @@ deploy-agent: deploy-agent-prereqs
 	fi; \
 	(uv export --no-hashes --no-header --no-dev --no-emit-project --no-annotate > app/app_utils/.requirements.txt 2>/dev/null || \
 	uv export --no-hashes --no-header --no-dev --no-emit-project > app/app_utils/.requirements.txt) && \
+	GOOGLE_CLOUD_PROJECT="$$PROJECT_ID" \
+	GOOGLE_CLOUD_PROJECT_ID="$$PROJECT_ID" \
 	uv run -m app.app_utils.deploy \
 		--project="$$PROJECT_ID" \
 		--location="$(DEPLOY_REGION)" \
@@ -182,7 +184,7 @@ deploy-api: deploy-prereqs
 		echo "Set REMOTE_AGENT_ENGINE_ID=<projects/.../reasoningEngines/...> or run 'make deploy-agent' first."; \
 		exit 1; \
 	fi; \
-	APP_SERVICE_ACCOUNT="$$PROJECT_ID-$(PROJECT_NAME)-app@$$PROJECT_ID.iam.gserviceaccount.com"; \
+	APP_SERVICE_ACCOUNT="$(PROJECT_NAME)-app@$$PROJECT_ID.iam.gserviceaccount.com"; \
 	SERVICE_ACCOUNT_FLAG=""; \
 	if gcloud iam service-accounts describe "$$APP_SERVICE_ACCOUNT" --project="$$PROJECT_ID" >/dev/null 2>&1; then \
 		SERVICE_ACCOUNT_FLAG="--service-account=$$APP_SERVICE_ACCOUNT"; \
