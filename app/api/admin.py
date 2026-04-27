@@ -31,6 +31,8 @@ from app.db import topics as topics_repo
 from app.db import users as users_repo
 from app.services.lesson_builder_ai import generate_lesson_draft, refine_lesson_draft
 
+_DEFAULT_LANGUAGE_ID = os.environ.get("DEFAULT_LANGUAGE_ID", "es")
+
 router = APIRouter(
     prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)]
 )
@@ -222,7 +224,7 @@ def delete_lesson(course_id: str, lesson_id: str) -> None:
 
 class LessonAIDraftRequest(BaseModel):
     source_content: str
-    language_id: str = "es"
+    language_id: str = _DEFAULT_LANGUAGE_ID
     learner_level: str = "beginner"
     lesson_length_minutes: int = 10
     focus_skills: list[str] = Field(default_factory=lambda: ["speaking"])
@@ -243,7 +245,7 @@ def create_lesson_ai_draft(body: LessonAIDraftRequest) -> dict[str, Any]:
         raise HTTPException(422, "focus_skills must include at least one skill")
     return generate_lesson_draft(
         source_content=source_content,
-        language_id=body.language_id.strip() or "es",
+        language_id=body.language_id.strip() or _DEFAULT_LANGUAGE_ID,
         learner_level=body.learner_level.strip() or "beginner",
         lesson_length_minutes=body.lesson_length_minutes,
         focus_skills=parsed_focus_skills,
@@ -276,7 +278,7 @@ def refine_lesson_ai_draft(body: LessonAIRefineRequest) -> dict[str, Any]:
 
 class TopicAIDraftRequest(BaseModel):
     source_content: str
-    language_id: str = "es"
+    language_id: str = _DEFAULT_LANGUAGE_ID
     conversation_duration_minutes: int = 15
     difficulty_level: str = "intermediate"
     focus_skills: list[str] = Field(default_factory=lambda: ["speaking"])
@@ -299,7 +301,7 @@ def create_topic_ai_draft(body: TopicAIDraftRequest) -> dict[str, Any]:
         raise HTTPException(422, "focus_skills must include at least one skill")
     return generate_topic_draft(
         source_content=source_content,
-        language_id=body.language_id.strip() or "es",
+        language_id=body.language_id.strip() or _DEFAULT_LANGUAGE_ID,
         conversation_duration_minutes=body.conversation_duration_minutes,
         difficulty_level=body.difficulty_level.strip() or "intermediate",
         focus_skills=parsed_focus_skills,

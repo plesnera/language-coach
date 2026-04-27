@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -25,6 +26,7 @@ from google.cloud.firestore_v1.base_document import DocumentSnapshot
 from app.db.client import get_firestore_client
 
 COLLECTION = "courses"
+_DEFAULT_LANGUAGE_ID = os.environ.get("DEFAULT_LANGUAGE_ID", "es")
 LESSONS_SUB = "lessons"
 
 
@@ -240,14 +242,14 @@ def delete_lesson(course_id: str, lesson_id: str) -> bool:
 
 
 def seed_defaults() -> None:
-    """Create a default Spanish beginner course with starter lessons if none exist."""
-    if list_by_language("es"):
+    """Create a default beginner course with starter lessons if none exist."""
+    if list_by_language(_DEFAULT_LANGUAGE_ID):
         return
 
     from app.db.images import get_or_upload_seed_image
 
     course = create(
-        language_id="es",
+        language_id=_DEFAULT_LANGUAGE_ID,
         title="Spanish for Beginners",
         description="Build a solid foundation in everyday Spanish.",
         sort_order=1,

@@ -21,9 +21,10 @@ from google.genai import types
 
 from app.agents.prompt_loader import load_prompt
 from app.agents.safe_gemini import SafeGemini
+from app.agents.setup import DEFAULT_LANGUAGE_ID
 
 
-def create_beginner_agent(language_id: str = "es") -> Agent:
+def create_beginner_agent(language_id: str = DEFAULT_LANGUAGE_ID) -> Agent:
     instruction = load_prompt(language_id, "beginner")
     return Agent(
         name="beginner_agent",

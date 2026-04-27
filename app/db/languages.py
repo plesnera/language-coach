@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -25,6 +26,7 @@ from google.cloud.firestore_v1.base_document import DocumentSnapshot
 from app.db.client import get_firestore_client
 
 COLLECTION = "languages"
+_DEFAULT_LANGUAGE_ID = os.environ.get("DEFAULT_LANGUAGE_ID", "es")
 
 
 def _doc_to_dict(doc: DocumentSnapshot) -> dict[str, Any] | None:
@@ -104,6 +106,6 @@ def delete(language_id: str) -> bool:
 
 
 def seed_defaults() -> None:
-    """Ensure the default Spanish language exists."""
-    if get("es") is None:
-        create("es", "Spanish", enabled=True)
+    """Ensure the default language exists."""
+    if get(_DEFAULT_LANGUAGE_ID) is None:
+        create(_DEFAULT_LANGUAGE_ID, "Spanish", enabled=True)

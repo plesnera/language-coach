@@ -192,3 +192,44 @@ Key routing rules:
 - Architecture review → invoke plan-eng-review
 - Save progress, checkpoint, resume → invoke checkpoint
 - Code quality, health check → invoke health
+
+## Deploy Configuration (configured by /setup-deploy)
+- **Platform:** GCP (Cloud Run + Vertex Agent Engine + Firebase Hosting)
+- **Production URL:** https://language-coach.web.app
+- **Deploy workflow:** Automatic on push to main (Cloud Build / CI/CD)
+- **Deploy status command:** `make deploy` (manual fallback) or Cloud Build dashboard
+- **Merge method:** Squash and merge
+- **Project type:** Web app (FastAPI backend + React frontend)
+- **Post-deploy health check:** https://language-coach.web.app/api/health
+
+### CI/CD Pipeline
+
+Three Cloud Build triggers are defined in `deployment/terraform/dev/cloudbuild.tf` (created via Terraform when `enable_cicd_triggers = true`):
+
+| Trigger | Event | Config | Purpose |
+|---------|-------|--------|---------|
+| `pr-checks` | PR to `main` | `.cloudbuild/pr_checks.yaml` | Unit tests, integration tests, frontend build validation |
+| `deploy-staging` | Push to `main` | `.cloudbuild/staging.yaml` | Deploy agent → API → load test → frontend → trigger prod |
+| `deploy-prod` | Manual (from staging) | `.cloudbuild/deploy-to-prod.yaml` | Canary deploy (10% → verify → 100%) to production |
+
+**Staging → Prod promotion flow:**
+1. Push to `main` triggers `deploy-staging`
+2. Staging pipeline deploys the agent, API, runs load tests, and deploys the frontend
+3. If load tests pass, the staging pipeline runs `gcloud beta builds triggers run deploy-prod`
+4. The prod pipeline deploys with a Cloud Run canary (10% traffic → health check → 100% traffic)
+
+### Custom deploy hooks
+- **Pre-merge:** `make test` and `make lint`
+- **Deploy trigger:** Automatic via Cloud Build on merge to main (or `make deploy` manually)
+- **Deploy status:** Poll production URL for 200 OK
+- **Health check:** https://language-coach.web.app/health
+
+### Deploy targets
+- `make deploy-agent` — Deploy ADK agent to Vertex Agent Engine
+- `make deploy-api` — Deploy FastAPI backend to Cloud Run
+- `make deploy-frontend` — Deploy React frontend to Firebase Hosting
+- `make deploy` — Run all three deploy targets
+- `make setup-dev-env` — Provision dev infrastructure via Terraform
+
+### Cloud Run source deploys
+A `.gcloudignore` file is present at the repository root to prevent Cloud Run source deploys from uploading unnecessary files (e.g., `node_modules`, `.venv`, `.git`, `.terraform`).

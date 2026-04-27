@@ -41,6 +41,30 @@ variable "feedback_logs_filter" {
   default     = "jsonPayload.log_type=\"feedback\" jsonPayload.service_name=\"language-coach\""
 }
 
+variable "github_repo_owner" {
+  type        = string
+  description = "GitHub repository owner"
+  default     = "plesnera"
+}
+
+variable "github_repo_name" {
+  type        = string
+  description = "GitHub repository name"
+  default     = "language-coach"
+}
+
+variable "github_connection_name" {
+  type        = string
+  description = "Name of the existing Cloud Build GitHub connection"
+  default     = "git-language-coach"
+}
+
+variable "enable_cicd_triggers" {
+  type        = bool
+  description = "Enable Cloud Build CICD triggers"
+  default     = false
+}
+
 variable "app_sa_roles" {
   description = "List of roles to assign to the application service account"
   type        = list(string)

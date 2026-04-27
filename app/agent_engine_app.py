@@ -16,19 +16,35 @@ import os
 from typing import Any
 
 import vertexai
+from google.adk.agents import Agent
+from google.adk.apps import App
 from google.adk.artifacts import GcsArtifactService, InMemoryArtifactService
 from google.cloud import logging as google_cloud_logging
 from vertexai.agent_engines.templates.adk import AdkApp
 from vertexai.preview.reasoning_engines import AdkApp as PreviewAdkApp
 
-from app.agents.router_agent import app as adk_app
+from app.agents.router_agent import get_app as _get_router_app
 from app.app_utils.feedback_typing import Feedback
 from app.app_utils.telemetry import setup_telemetry
 
 
+# Placeholder app to satisfy AdkApp.__init__ validation without hitting Firestore.
+# The real app is swapped in during set_up().
+_PLACEHOLDER_APP = App(
+    root_agent=Agent(name="placeholder", model="gemini-2.0-flash"),
+    name="placeholder_app",
+)
+
+
 class AgentEngineApp(AdkApp):
+    def _ensure_app(self) -> None:
+        """Lazy-load the wrapped ADK app to avoid Firestore at import time."""
+        if self._tmpl_attrs.get("app") is _PLACEHOLDER_APP:
+            self._tmpl_attrs["app"] = _get_router_app()
+
     def set_up(self) -> None:
         """Initialize the agent engine app with logging and telemetry."""
+        self._ensure_app()
         vertexai.init()
         setup_telemetry()
         super().set_up()
@@ -59,7 +75,7 @@ AgentEngineApp.bidi_stream_query = PreviewAdkApp.bidi_stream_query
 gemini_location = os.environ.get("GOOGLE_CLOUD_LOCATION")
 logs_bucket_name = os.environ.get("LOGS_BUCKET_NAME")
 agent_engine = AgentEngineApp(
-    app=adk_app,
+    app=_PLACEHOLDER_APP,
     artifact_service_builder=lambda: (
         GcsArtifactService(bucket_name=logs_bucket_name)
         if logs_bucket_name

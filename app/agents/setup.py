@@ -34,3 +34,6 @@ os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
 os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "True")
 
 vertexai.init(project=project_id, location=location)
+
+# Default language for all agents and seed data (override via env var).
+DEFAULT_LANGUAGE_ID = os.environ.get("DEFAULT_LANGUAGE_ID", "en")

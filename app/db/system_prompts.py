@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -25,6 +26,7 @@ from google.cloud.firestore_v1.base_document import DocumentSnapshot
 from app.db.client import get_firestore_client
 
 COLLECTION = "system_prompts"
+_DEFAULT_LANGUAGE_ID = os.environ.get("DEFAULT_LANGUAGE_ID", "es")
 
 # Valid prompt types — each agent mode + the summarisation tool + content generation tools.
 PROMPT_TYPES = ("router", "beginner", "topic", "freestyle", "summarisation", "lesson_draft", "topic_draft")
@@ -234,12 +236,12 @@ _SEED_PROMPTS: list[tuple[str, str, str]] = [
 
 
 def seed_defaults() -> None:
-    """Seed one active system prompt per agent type for Spanish if none exist."""
+    """Seed one active system prompt per agent type for the default language if none exist."""
     for prompt_type, name, text in _SEED_PROMPTS:
-        if get_active("es", prompt_type) is not None:
+        if get_active(_DEFAULT_LANGUAGE_ID, prompt_type) is not None:
             continue
         create(
-            language_id="es",
+            language_id=_DEFAULT_LANGUAGE_ID,
             prompt_type=prompt_type,
             name=name,
             prompt_text=text,

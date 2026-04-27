@@ -1,3 +1,13 @@
+# ==============================================================================
+# Root Terraform Variables
+# ==============================================================================
+# These values are used by the root Terraform workspace (deployment/terraform/)
+# for multi-project setups with separate staging and production projects.
+#
+# For single-project dev/staging, use deployment/terraform/dev/vars/env.tfvars
+# and run `make setup-dev-env` instead.
+# ==============================================================================
+
 # Project name used for resource naming
 project_name = "language-coach"
 

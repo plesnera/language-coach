@@ -68,4 +68,28 @@ resource "google_project_iam_member" "app_sa_roles" {
 # Vertex AI service account permissions are typically handled automatically
 # If manual permissions are needed, uncomment and use the data source above
 
+locals {
+  cloudbuild_sa = "serviceAccount:${data.google_project.dev_project.number}@cloudbuild.gserviceaccount.com"
+}
+
+# Grant Cloud Build service account permissions to deploy and manage resources
+resource "google_project_iam_member" "cloudbuild_roles" {
+  for_each = toset([
+    "roles/run.admin",
+    "roles/aiplatform.user",
+    "roles/firebasehosting.admin",
+    "roles/iam.serviceAccountUser",
+  ])
+  project    = var.dev_project_id
+  role       = each.value
+  member     = local.cloudbuild_sa
+  depends_on = [resource.google_project_service.services]
+}
+
+resource "google_storage_bucket_iam_member" "cloudbuild_logs_admin" {
+  bucket     = google_storage_bucket.logs_data_bucket.name
+  role       = "roles/storage.admin"
+  member     = local.cloudbuild_sa
+  depends_on = [resource.google_project_service.services]
+}
 

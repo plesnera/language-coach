@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -25,6 +26,7 @@ from google.cloud.firestore_v1.base_document import DocumentSnapshot
 from app.db.client import get_firestore_client
 
 COLLECTION = "topics"
+_DEFAULT_LANGUAGE_ID = os.environ.get("DEFAULT_LANGUAGE_ID", "es")
 
 
 def _doc_to_dict(doc: DocumentSnapshot) -> dict[str, Any] | None:
@@ -98,8 +100,8 @@ def delete(topic_id: str) -> bool:
 
 
 def seed_defaults() -> None:
-    """Create the three default Spanish topics if none exist yet."""
-    if list_by_language("es"):
+    """Create the three default topics if none exist yet."""
+    if list_by_language(_DEFAULT_LANGUAGE_ID):
         return
 
     from app.db.images import get_or_upload_seed_image
@@ -155,7 +157,7 @@ def seed_defaults() -> None:
     ]
     for topic in defaults:
         create(
-            language_id="es",
+            language_id=_DEFAULT_LANGUAGE_ID,
             title=topic["title"],
             description=topic["description"],
             conversation_prompt=topic["conversation_prompt"],

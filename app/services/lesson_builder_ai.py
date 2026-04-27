@@ -10,6 +10,7 @@ import os
 from typing import Any
 
 _LOCAL_DEV = os.environ.get("LOCAL_DEV", "").lower() in ("1", "true", "yes")
+_DEFAULT_LANGUAGE_ID = os.environ.get("DEFAULT_LANGUAGE_ID", "es")
 
 
 def generate_lesson_draft(
@@ -62,7 +63,7 @@ def refine_lesson_draft(
     return _generate_with_gemini(
         mode="refine",
         source_content="",
-        language_id=str(current_draft.get("ai_generation_context", {}).get("language_id", "es")),
+        language_id=str(current_draft.get("ai_generation_context", {}).get("language_id", _DEFAULT_LANGUAGE_ID)),
         learner_level=str(
             current_draft.get("ai_generation_context", {}).get("learner_level", "beginner")
         ),
