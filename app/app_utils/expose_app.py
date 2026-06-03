@@ -169,11 +169,12 @@ app.mount(
     name="uploads-images",
 )
 
-# Mount assets if build directory exists
-if frontend_build_dir.exists():
+# Mount assets if build directory and assets subdirectory exist
+_assets_dir = frontend_build_dir / "assets"
+if frontend_build_dir.exists() and _assets_dir.exists():
     app.mount(
         "/assets",
-        StaticFiles(directory=str(frontend_build_dir / "assets")),
+        StaticFiles(directory=str(_assets_dir)),
         name="assets",
     )
 # Cloud Logging — gracefully fall back to standard Python logging when

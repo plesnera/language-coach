@@ -42,6 +42,7 @@ def admin_client():
     app.dependency_overrides.clear()
 
 
+@pytest.mark.requires_emulator
 def test_admin_create_lesson_forwards_metadata_fields(admin_client):
     mocked_created = {
         "id": "lesson-1",
@@ -107,6 +108,7 @@ def test_admin_create_lesson_forwards_metadata_fields(admin_client):
     assert kwargs["ai_generation_context"]["learner_level"] == "beginner"
 
 
+@pytest.mark.requires_emulator
 def test_admin_update_lesson_forwards_metadata_fields(admin_client):
     mocked_updated = {
         "id": "lesson-1",
@@ -144,6 +146,7 @@ def test_admin_update_lesson_forwards_metadata_fields(admin_client):
     assert args[2]["visual_aids"][0]["type"] == "diagram"
 
 
+@pytest.mark.requires_emulator
 def test_admin_lessons_ai_draft_success_and_normalization(admin_client):
     mocked = {
         "title": "Draft lesson",
@@ -181,6 +184,7 @@ def test_admin_lessons_ai_draft_success_and_normalization(admin_client):
     assert kwargs["constraints"] == "keep short"
 
 
+@pytest.mark.requires_emulator
 def test_admin_lessons_ai_draft_validation_errors(admin_client):
     empty_source = admin_client.post(
         "/api/admin/lessons/ai/draft",
@@ -226,6 +230,7 @@ def test_admin_lessons_ai_draft_validation_errors(admin_client):
     ]
 
 
+@pytest.mark.requires_emulator
 def test_admin_lessons_ai_refine_success_and_validation(admin_client):
     mocked = {
         "title": "Refined lesson",
