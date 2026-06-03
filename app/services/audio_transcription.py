@@ -23,7 +23,7 @@ def transcribe_audio(
         # Development mock that simulates successful transcription
         # This allows testing the file upload flow without GCP dependencies
         return (
-            f"Mock transcription successful! File size: {len(file_bytes)} bytes. "
+            f"[LOCAL_DEV] Mock transcription successful! File size: {len(file_bytes)} bytes. "
             f"Detected language: {language_code}. "
             "This is a simulated transcript that would come from Google Cloud Speech-to-Text "
             "in production. The actual audio content would be transcribed here."
