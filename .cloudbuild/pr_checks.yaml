@@ -51,6 +51,10 @@ steps:
         npm --prefix frontend ci
         npm --prefix frontend run build
 
-logsBucket: gs://${PROJECT_ID}-language-coach-logs/build-logs
+substitutions:
+  _PROJECT_ID: ${PROJECT_ID}
+  _LOGS_BUCKET_NAME: ${PROJECT_ID}-language-coach-logs
+
+logsBucket: gs://${_LOGS_BUCKET_NAME}/build-logs
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET

@@ -634,14 +634,89 @@ Expand and improve documentation for onboarding and maintenance.
 
 ---
 
+### TODO-026: Remove Stale Admin Page References from AGENTS.md
+**Status:** ❌ Not Started
+**Priority:** Low
+**Estimate:** 30 minutes
+**Owner:** [Unassigned]
+
+**Description:**
+`AGENTS.md` lists the legacy admin pages (`AdminCoursesPage`, `AdminLessonsPage`, `AdminTopicsPage`, `AdminPromptsPage`, `AdminUsersPage`) under `frontend/src/pages/admin/`. The actual directory now also contains `AdminLanguagePage.tsx` and `AdminMainPage.tsx`, and the existing files are present, but the AGENTS.md list omits the new ones. Decide whether AGENTS.md should enumerate admin pages at all (it drifts easily) and, if kept, update the list.
+
+**Why:**
+The current document is the consolidated guidance file for all coding agents. A stale file list quietly rots and becomes misleading.
+
+**Acceptance Criteria:**
+- [ ] Either remove the admin page list from `AGENTS.md` or include `AdminLanguagePage` and `AdminMainPage`
+- [ ] Confirm the active frontend pages match by running `ls frontend/src/pages admin`
+
+---
+
+### TODO-027: Audit Sources of Truth Cross-References
+**Status:** ❌ Not Started
+**Priority:** Medium
+**Estimate:** 1 hour
+**Owner:** [Unassigned]
+
+**Description:**
+`AGENTS.md` (sources-of-truth section) names `README.md`, `DESIGN.md`, `docs/TESTING.md`, `docs/LOCAL_SETUP.md`, and `docs/DEPLOYMENT.md`. Confirm each referenced doc exists and is current. Also confirm there are no other agent-instructions files (e.g., other `AGENT*.md`, `CLAUDE*.md`) outside the repo root that could conflict.
+
+**Why:**
+After the AGENTS.md consolidation we want to be sure no stray guidance is sitting in another doc that would contradict it.
+
+**Acceptance Criteria:**
+- [ ] Each referenced doc still exists and is reachable
+- [ ] No duplicate agent-instructions file exists outside the repo root
+- [ ] If `docs/DEPLOYMENT.md` content disagrees with the AGENTS.md deployment section, decide which wins and note in AGENTS.md
+
+---
+
+### TODO-028: Verify CLAUDE.md / AGENT.md Removal Did Not Break Tooling
+**Status:** ❌ Not Started
+**Priority:** Medium
+**Estimate:** 1 hour
+**Owner:** [Unassigned]
+
+**Description:**
+The previous setup had `AGENT.md` and `CLAUDE.md` alongside the consolidated `AGENTS.md`. Now only `AGENTS.md` remains. Check whether any local tool (e.g., the Cursor / Claude Code / Copilot file-pickers, or a CI step) is still configured to look up `AGENT.md` or `CLAUDE.md` and would now silently miss guidance.
+
+**Why:**
+Silent loss of context is worse than duplicate guidance.
+
+**Acceptance Criteria:**
+- [ ] Confirm `AGENT.md` and `CLAUDE.md` are not referenced by any IDE/tool config, CI script, hook, or Makefile target
+- [ ] If anything still points at them, retarget it to `AGENTS.md`
+
+---
+
+### TODO-029: Reconcile TODOS.md Roadmap With Actual TODOs
+**Status:** ❌ Not Started
+**Priority:** Low
+**Estimate:** 30 minutes
+**Owner:** [Unassigned]
+
+**Description:**
+The "Roadmap" section in this file references TODO IDs that don't match the items in the list (e.g., "TODO-003: Expand Authentication Testing" and "TODO-004: Add Rate Limiting" appear, but the actual numbered items use those IDs for "Production Monitoring" and "Secrets Management"). The stats block ("Total Tasks: 16") and roadmap references also drift as new items are added.
+
+**Why:**
+A roadmap that points at the wrong task numbers is actively misleading for planning.
+
+**Acceptance Criteria:**
+- [ ] Re-number or rename TODOs so the Roadmap and the items agree
+- [ ] Update the "Total Tasks" count and the per-priority counts to match current state
+- [ ] Update "Last updated" footer
+
+---
+
 ## 📊 Task Statistics
 
-**Total Tasks:** 16  
+**Total Tasks:** 20  
 **Critical:** 8  
 **High Priority:** 6  
 **Medium Priority:** 4  
+**Low Priority:** 2
 
-**Estimated Total Effort:** ~35-45 days  
+**Estimated Total Effort:** ~37-46 days  
 **Critical Path:** ~12-18 days (monitoring, secrets, Firestore prod, auth testing, rate limiting, WAF/CDN)
 
 ## 📁 Terraform Files Summary
@@ -723,5 +798,5 @@ Expand and improve documentation for onboarding and maintenance.
 
 ---
 
-*Last updated: 2026-04-08*
+*Last updated: 2026-09-13*
 *Review cycle: Weekly on Fridays*

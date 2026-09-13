@@ -315,7 +315,7 @@ deploy-api: deploy-prereqs
 		--project="$(PROJECT_ID)" \
 		--region="$(DEPLOY_REGION)" \
 		--source="." \
-		--allow-unauthenticated \
+		--no-allow-unauthenticated \
 		--port="$(API_SERVICE_PORT)" \
 		--cpu="$(API_CPU)" \
 		--memory="$(API_MEMORY)" \
@@ -326,25 +326,39 @@ deploy-api: deploy-prereqs
 		--command="python" \
 		--args="-m,app.app_utils.expose_app,--mode,remote,--remote-id=$$REMOTE_ID,--project-id=$(PROJECT_ID),--location=$(DEPLOY_REGION),--host,0.0.0.0,--port,$(API_SERVICE_PORT)"; \
 	API_URL=$$(gcloud run services describe "$(API_SERVICE_NAME)" --project="$(PROJECT_ID)" --region="$(DEPLOY_REGION)" --format="value(status.url)"); \
-	echo "✅ API deployed: $$API_URL"
+	echo "✅ API deployed: $$API_URL"; \
+	echo "🔒 Locking API to Firebase Hosting rewrites only..."; \
+	FB_HOSTING_SA="firebase-hosting@$(PROJECT_ID).iam.gserviceaccount.com"; \
+	if gcloud iam service-accounts describe "$$FB_HOSTING_SA" --project="$(PROJECT_ID)" >/dev/null 2>&1; then \
+		gcloud run services add-iam-policy-binding "$(API_SERVICE_NAME)" \
+			--project="$(PROJECT_ID)" \
+			--region="$(DEPLOY_REGION)" \
+			--member="serviceAccount:$$FB_HOSTING_SA" \
+			--role="roles/run.invoker" --condition=None; \
+		echo "✅ Firebase Hosting granted run.invoker on $(API_SERVICE_NAME)"; \
+	else \
+		echo "⚠️  $$FB_HOSTING_SA not found. Skipping IAM binding — run 'make deploy-frontend' first to create the Hosting service account, then re-run 'make deploy-api'."; \
+	fi
 
 # Build and deploy frontend to Firebase Hosting.
-# If FRONTEND_API_BASE_URL is unset, this derives it from the deployed Cloud Run API service.
-# If FRONTEND_WS_BASE_URL is unset, this derives it from FRONTEND_API_BASE_URL.
+# If FRONTEND_API_BASE_URL is unset, the frontend uses relative /api/ paths
+# proxied by Firebase Hosting rewrites to the Cloud Run backend.
+# If FRONTEND_WS_BASE_URL is unset, it derives from FRONTEND_API_BASE_URL.
 # Usage: make deploy-frontend [FRONTEND_API_BASE_URL=https://...] [FRONTEND_WS_BASE_URL=wss://...]
 deploy-frontend: deploy-prereqs
 	@command -v firebase >/dev/null 2>&1 || { echo "❌ Firebase CLI not found. Install with: npm install -g firebase-tools"; exit 1; }; \
-	API_BASE_URL="$(FRONTEND_API_BASE_URL)"; \
-	if [ -z "$$API_BASE_URL" ]; then \
-		API_BASE_URL=$$(gcloud run services describe "$(API_SERVICE_NAME)" --project="$(PROJECT_ID)" --region="$(DEPLOY_REGION)" --format="value(status.url)" 2>/dev/null); \
-	fi; \
-	if [ -z "$$API_BASE_URL" ]; then \
-		echo "❌ Could not determine frontend API URL."; \
-		echo "Deploy API first (make deploy-api) or set FRONTEND_API_BASE_URL explicitly."; \
+	if ! firebase hosting:sites:list --project "$(PROJECT_ID)" >/dev/null 2>&1; then \
+		echo "❌ Firebase Hosting is not initialized for project $(PROJECT_ID)."; \
+		echo "   Go to https://console.firebase.google.com/project/$(PROJECT_ID)/hosting and click 'Get started',"; \
+		echo "   or run: firebase hosting:sites:create --project $(PROJECT_ID)"; \
 		exit 1; \
 	fi; \
+	API_BASE_URL="$(FRONTEND_API_BASE_URL)"; \
+	if [ -z "$$API_BASE_URL" ]; then \
+		echo "ℹ️  FRONTEND_API_BASE_URL not set; frontend will use relative /api/ paths via Firebase Hosting rewrites."; \
+	fi; \
 	WS_BASE_URL="$(FRONTEND_WS_BASE_URL)"; \
-	if [ -z "$$WS_BASE_URL" ]; then \
+	if [ -z "$$WS_BASE_URL" ] && [ -n "$$API_BASE_URL" ]; then \
 		WS_BASE_URL=$$(printf '%s' "$$API_BASE_URL" | sed -e 's#^https://#wss://#' -e 's#^http://#ws://#'); \
 	fi; \
 	FB_PROJECT_ID="$(VITE_FIREBASE_PROJECT_ID)"; \
@@ -353,20 +367,16 @@ deploy-frontend: deploy-prereqs
 	if [ -z "$$FB_AUTH_DOMAIN" ]; then FB_AUTH_DOMAIN="$(PROJECT_ID).firebaseapp.com"; fi; \
 	FB_STORAGE_BUCKET="$(VITE_FIREBASE_STORAGE_BUCKET)"; \
 	if [ -z "$$FB_STORAGE_BUCKET" ]; then FB_STORAGE_BUCKET="$(PROJECT_ID).appspot.com"; fi; \
-	BUILD_ENV="VITE_API_BASE_URL=$$API_BASE_URL VITE_WS_BASE_URL=$$WS_BASE_URL"; \
-	BUILD_ENV="$$BUILD_ENV VITE_FIREBASE_PROJECT_ID=$$FB_PROJECT_ID"; \
-	BUILD_ENV="$$BUILD_ENV VITE_FIREBASE_AUTH_DOMAIN=$$FB_AUTH_DOMAIN"; \
-	BUILD_ENV="$$BUILD_ENV VITE_FIREBASE_STORAGE_BUCKET=$$FB_STORAGE_BUCKET"; \
-	if [ -n "$(VITE_FIREBASE_API_KEY)" ]; then \
-		BUILD_ENV="$$BUILD_ENV VITE_FIREBASE_API_KEY=$(VITE_FIREBASE_API_KEY)"; \
-	fi; \
-	if [ -n "$(VITE_FIREBASE_MESSAGING_SENDER_ID)" ]; then \
-		BUILD_ENV="$$BUILD_ENV VITE_FIREBASE_MESSAGING_SENDER_ID=$(VITE_FIREBASE_MESSAGING_SENDER_ID)"; \
-	fi; \
-	if [ -n "$(VITE_FIREBASE_APP_ID)" ]; then \
-		BUILD_ENV="$$BUILD_ENV VITE_FIREBASE_APP_ID=$(VITE_FIREBASE_APP_ID)"; \
-	fi; \
-	(cd frontend && $$BUILD_ENV npm run build); \
+	(cd frontend && \
+		VITE_API_BASE_URL="$$API_BASE_URL" \
+		VITE_WS_BASE_URL="$$WS_BASE_URL" \
+		VITE_FIREBASE_PROJECT_ID="$$FB_PROJECT_ID" \
+		VITE_FIREBASE_AUTH_DOMAIN="$$FB_AUTH_DOMAIN" \
+		VITE_FIREBASE_STORAGE_BUCKET="$$FB_STORAGE_BUCKET" \
+		VITE_FIREBASE_API_KEY="$(VITE_FIREBASE_API_KEY)" \
+		VITE_FIREBASE_MESSAGING_SENDER_ID="$(VITE_FIREBASE_MESSAGING_SENDER_ID)" \
+		VITE_FIREBASE_APP_ID="$(VITE_FIREBASE_APP_ID)" \
+		npm run build); \
 	firebase deploy --only hosting --project "$(PROJECT_ID)"; \
 	echo "✅ Frontend deployed with API_BASE=$$API_BASE_URL and WS_BASE=$$WS_BASE_URL"
 

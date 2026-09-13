@@ -14,6 +14,7 @@
 
 import json
 import logging
+import os
 import time
 
 from locust import User, between, task
@@ -38,6 +39,12 @@ class WebSocketUser(User):
             self.ws_url = self.host.replace("http://", "ws://", 1) + "/ws"
         else:
             self.ws_url = self.host + "/ws"
+        self._auth_token = os.environ.get("AUTH_TOKEN", "")
+
+    def _ws_headers(self) -> dict[str, str] | None:
+        if self._auth_token:
+            return {"Authorization": f"Bearer {self._auth_token}"}
+        return None
 
     @task
     def websocket_audio_conversation(self) -> None:
@@ -77,7 +84,12 @@ class WebSocketUser(User):
         """Handle the websocket interaction and return response count."""
         response_count = 0
 
-        with connect(self.ws_url, open_timeout=10, close_timeout=20) as websocket:
+        with connect(
+            self.ws_url,
+            open_timeout=10,
+            close_timeout=20,
+            additional_headers=self._ws_headers(),
+        ) as websocket:
             # Wait for setupComplete
             setup_response = websocket.recv(timeout=10.0)
             setup_data = json.loads(setup_response)
